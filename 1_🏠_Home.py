@@ -5,6 +5,18 @@ import folium
 import json
 from geojson import Feature, FeatureCollection
 
+# Funzione per calcolare i bounds di tutte le geometrie
+def calculate_bounds(drawings):
+    all_coords = []
+    for drawing in drawings:
+        for polygon in drawing['geometry']['coordinates']:
+            all_coords.extend(polygon)
+    min_lon = min(coord[0] for coord in all_coords)
+    max_lon = max(coord[0] for coord in all_coords)
+    min_lat = min(coord[1] for coord in all_coords)
+    max_lat = max(coord[1] for coord in all_coords)
+    return [[min_lat, min_lon], [max_lat, max_lon]]
+
 # Dialog che viene aperto ogni volta in cui viene selezionata un'area geografica
 # Serve per inserire informazioni come il nome di un'area geografica.
 # Ottine il testo inserito dall'utente e lo assegna alla properties 'name' 
@@ -22,6 +34,9 @@ def set_info_area(last_drawing, m):
             st.session_state.drawings = []
         st.session_state.drawings.append(last_drawing)
 
+        # Calcola i bounds e aggiorna il session state
+        st.session_state.bounds = calculate_bounds(st.session_state.drawings)
+
         center_lat = m['center']['lat']
         center_lng = m['center']['lng']
         zoom = m['zoom']
@@ -29,7 +44,7 @@ def set_info_area(last_drawing, m):
         st.session_state.lon = center_lng
         st.session_state.zoom = zoom
         st.rerun()
-        
+
 st.set_page_config(layout="wide")
 st.sidebar.expander("Sidebar", expanded=True)
 
@@ -139,6 +154,9 @@ with col1:
                         'geometry': feature['geometry'],
                         'properties': feature['properties']
                     })
+                    
+                # Calcola i bounds e aggiorna il session state
+                st.session_state.bounds = calculate_bounds(st.session_state.drawings)
         else:
             st.session_state.last_uploaded_file = None
 
@@ -156,6 +174,10 @@ with col1:
                 drawing,
                 tooltip=tooltip_text  # Usa il testo formattato qui
             ).add_to(m)
+
+    # Centra la mappa ai limiti delle coordinate
+    if 'bounds' in st.session_state:
+        m.fit_bounds(st.session_state.bounds)
 
     # Viene ottenuto il componente streamlit_folium chiamato st_component
     # che servirà per ottenere le diverse informazioni sui disegni/aree
