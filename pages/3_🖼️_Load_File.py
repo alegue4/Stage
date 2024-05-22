@@ -124,7 +124,7 @@ last_static_map_image = None
 
 # Title
 st.markdown("<h1 style='text-align: center;'>Load File Page</p>", unsafe_allow_html=True)
-st.subheader("Introduzione")
+st.header("Introduzione")
 # Introduzione
 st.write("""In questa sezione della Web App è possibile caricare un file **GeoJSON** che 
          rappresenta un'area geografica delimitata da un poligono. I file
