@@ -1,9 +1,4 @@
 import streamlit as st
-from streamlit_folium import st_folium
-import leafmap.foliumap as leafmap
-import folium
-import json
-from geojson import Feature, FeatureCollection
 
 
 st.set_page_config(layout="wide")

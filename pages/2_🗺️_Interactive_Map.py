@@ -2,6 +2,7 @@ import streamlit as st
 from streamlit_folium import st_folium
 import leafmap.foliumap as leafmap
 import folium
+from folium.plugins import Draw, Search
 import json
 from geojson import Feature, FeatureCollection
 
@@ -125,12 +126,33 @@ with col1:
 
     # Crea Mappa iniziale con leafmap e il modulo foliumap e aggiunge il
     # basemap SATELLITE
-    m = leafmap.Map(locate_control=True, 
-                    plugin_LatLngPopup=False,
-                    center=(st.session_state.lat, st.session_state.lon), 
-                    zoom = st.session_state.zoom)
-    
-    m.add_basemap("SATELLITE") 
+    # Creazione della mappa utilizzando leafmap.foliumap.Map
+    m = leafmap.Map(
+        locate_control=True, 
+        scale_control=True,
+        plugin_LatLngPopup=False,
+        center=(st.session_state.lat, st.session_state.lon), 
+        zoom=st.session_state.zoom,
+        draw_control=False,  # Disattiviamo il draw_control
+    )
+    m.add_basemap("SATELLITE")
+
+    # Creazione di un Draw plugin personalizzato
+    draw = Draw(
+        draw_options={
+            'polyline': False,
+            'polygon': True,
+            'circle': False,
+            'rectangle': True,
+            'marker': False,
+            'circlemarker': False,
+        },
+        edit_options={
+        'edit': False,
+        'remove': False
+    }
+    )
+    draw.add_to(m)
 
     with col2:
         # Componente di caricamento di un GeoJSON dal quale vengono estratte
@@ -192,7 +214,7 @@ with col1:
     # che servirà per ottenere le diverse informazioni sui disegni/aree
     # selezionate nella mappa
     st_component = st_folium(m, height=600, use_container_width=True)
-    # st.json(st_component)
+    #st.json(st_component)
 
     # Questo if ottiene l'ultimo disegno/area selezionata nella mappa
     # interrativa. Se non esiste ancora un'area selezionata o se è già
