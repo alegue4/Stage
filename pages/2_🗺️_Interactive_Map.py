@@ -9,31 +9,60 @@ import geopandas as gpd
 from shapely.geometry import box
 import contextily as ctx
 import matplotlib.pyplot as plt
+import time
 import io
+import os
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-def create_map_image(bounds):
-    minx, miny, maxx, maxy = bounds
-    
-    # Creare un rettangolo che rappresenta i bounds
-    bbox = box(minx, miny, maxx, maxy)
-    geo_df = gpd.GeoDataFrame({'geometry': [bbox]}, crs="EPSG:4326")
-    
-    # Plot della mappa
-    fig, ax = plt.subpglots(figsize=(10, 10))
-    geo_df.boundary.plot(ax=ax, alpha=1, edgecolor='k')
-    
-    # Aggiunta delle tessere della mappa (usa le tessere satellitari di Google)
-    ctx.add_basemap(ax, crs=geo_df.crs.to_string(), source=ctx.providers.Esri.WorldImagery)
-    
-    # Imposta i limiti del grafico sui bounds
-    ax.set_xlim(minx, maxx)
-    ax.set_ylim(miny, maxy)
-    
-    # Salva l'immagine in un buffer
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight')
+def create_map_image(center, zoom):
+    lat, lon = center
+
+    # Crea Mappa iniziale con leafmap e il modulo foliumap e aggiunge il basemap SATELLITE
+    m = leafmap.Map(
+        locate_control=False,
+        scale_control=False,
+        plugin_LatLngPopup=False,
+        center=(lat, lon),
+        zoom=zoom,
+        draw_control=False,
+    )
+    m.add_basemap("SATELLITE")
+
+    # Salvare la mappa in un file HTML temporaneo
+    map_path = 'map.html'
+    m.save(map_path)
+
+    # Utilizzare selenium per fare uno screenshot della mappa
+    options = Options()
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    driver.set_window_size(800, 800)  # dimensioni della finestra
+
+    driver.get('file://' + os.path.abspath(map_path))
+
+    # Attendere che la mappa sia completamente caricata
+    WebDriverWait(driver, 50).until(
+        EC.presence_of_element_located((By.CLASS_NAME, 'leaflet-tile'))
+    )
+
+    img_data = driver.get_screenshot_as_png()
+    driver.quit()
+
+    # Salvare lo screenshot come buffer
+    buf = io.BytesIO(img_data)
     buf.seek(0)
-    
+
+    # Rimuovere il file HTML temporaneo
+    os.remove(map_path)
+
     return buf
 
 # Funzione per calcolare i bounds di tutte le aree inserite.
@@ -310,33 +339,26 @@ with col2:
         st.write("""E' possibile scaricare l'immagine della mappa che viene visualizzato al momento a schermo.
         Quindi se ci si sposta o si cambia la zoom verrà ottenuta una immagine diversa.
         """)
-        # Determina il nome del file in base alla lunghezza della lista dei disegni
-        default_file_name = "map_image.png"
-        file_name_col, download_col = st.columns(2)
-        with file_name_col:
-            file_name = st.text_input("Inserisci nome file", placeholder="Inserisci il nome del file", label_visibility="collapsed")
-            if not file_name:
-                file_name = default_file_name
-            elif not file_name.endswith(".png"):
-                file_name += ".png"
-    
-        with download_col:
-            # Estrai i bounds dall'oggetto st_component
-                bounds = st_component['bounds']
-                min_lat = bounds['_southWest']['lat']
-                min_lng = bounds['_southWest']['lng']
-                max_lat = bounds['_northEast']['lat']
-                max_lng = bounds['_northEast']['lng']
-                image_bounds = [min_lng, min_lat, max_lng, max_lat]
+        if st.button("Salva informazioni mappa attuale", use_container_width=True):
+            # Estrai i bounds e lo zoomdall'oggetto st_component
+            zoom = st_component['zoom']
+            center = st_component['center']
+            center_lat = center['lat']
+            center_lon = center['lng']
+            image_center = [center_lat, center_lon]
 
+            progress_text = "Ottenendo immagine mappa. Potrebbe richiedere un po' di secondi..."
+
+            with st.spinner(progress_text):
                 # Crea l'immagine della mappa
-                image_buf = create_map_image(image_bounds)
-                
-                # Aggiungi il pulsante per scaricare l'immagine
-                st.download_button(
-                    label="Download Map Image",
-                    data=image_buf,
-                    file_name=file_name,
-                    mime="image/png"
-                )
+                image_buf = create_map_image(image_center, zoom)
+                st.session_state.image_buf = image_buf
+            
+            # Aggiungi il pulsante per scaricare l'immagine
+            st.download_button(
+                label="Download Map Image",
+                data=st.session_state.image_buf,
+                file_name="map_image.png",
+                mime="image/png"
+            )
     
