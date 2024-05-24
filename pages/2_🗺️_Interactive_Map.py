@@ -5,6 +5,36 @@ import folium
 from folium.plugins import Draw, Search
 import json
 from geojson import Feature, FeatureCollection
+import geopandas as gpd
+from shapely.geometry import box
+import contextily as ctx
+import matplotlib.pyplot as plt
+import io
+
+def create_map_image(bounds):
+    minx, miny, maxx, maxy = bounds
+    
+    # Creare un rettangolo che rappresenta i bounds
+    bbox = box(minx, miny, maxx, maxy)
+    geo_df = gpd.GeoDataFrame({'geometry': [bbox]}, crs="EPSG:4326")
+    
+    # Plot della mappa
+    fig, ax = plt.subpglots(figsize=(10, 10))
+    geo_df.boundary.plot(ax=ax, alpha=1, edgecolor='k')
+    
+    # Aggiunta delle tessere della mappa (usa le tessere satellitari di Google)
+    ctx.add_basemap(ax, crs=geo_df.crs.to_string(), source=ctx.providers.Esri.WorldImagery)
+    
+    # Imposta i limiti del grafico sui bounds
+    ax.set_xlim(minx, maxx)
+    ax.set_ylim(miny, maxy)
+    
+    # Salva l'immagine in un buffer
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    
+    return buf
 
 # Funzione per calcolare i bounds di tutte le aree inserite.
 # Questa funziona viene chiamata ogni volta che viene aggiunta una nuova area alla
@@ -214,7 +244,7 @@ with col1:
     # che servirà per ottenere le diverse informazioni sui disegni/aree
     # selezionate nella mappa
     st_component = st_folium(m, height=600, use_container_width=True)
-    #st.json(st_component)
+    st.json(st_component)
 
     # Questo if ottiene l'ultimo disegno/area selezionata nella mappa
     # interrativa. Se non esiste ancora un'area selezionata o se è già
@@ -236,39 +266,77 @@ with col1:
 
 with col2:
     st.divider()
-    st.subheader("Export")
-    st.write("""Quando verranno inserite correttamente delle aree comparirà a sinistra
-             l'area per rinominare il file e a destra il pulsante per esportare il relativo GeoJSON.
-             """)
+    col_title, col_select = st.columns(2)
+    col_title.subheader("Export")
+    export_selected = col_select.selectbox("Informazioni relative a", options=["Aree disegnate", "Mappa completa"])
+    if(export_selected == "Aree disegnate"):
+        st.write("""Quando verranno inserite correttamente delle aree comparirà a sinistra
+        l'area per rinominare il file e a destra il pulsante per esportare il relativo GeoJSON.
+        Ricordare di premere *Invio* per confermare il nome del file.
+        """)
     
 
-    # Questo if controlla se è presente una lista di disegni/aree selezionate e
-    # dopo averli convertiti in un formato GeoJSON adeguato è possibile scaricare
-    # il file contenente tutte le informazioni.
-    if 'drawings' in st.session_state:
-        # Converti i disegni in formato GeoJSON
-        features = [Feature(geometry=drawing['geometry'], properties=drawing['properties']) for drawing in st.session_state.drawings]
-        feature_collection = FeatureCollection(features)
-        geojson_str = json.dumps(feature_collection)
+        # Questo if controlla se è presente una lista di disegni/aree selezionate e
+        # dopo averli convertiti in un formato GeoJSON adeguato è possibile scaricare
+        # il file contenente tutte le informazioni.
+        if 'drawings' in st.session_state:
+            # Converti i disegni in formato GeoJSON
+            features = [Feature(geometry=drawing['geometry'], properties=drawing['properties']) for drawing in st.session_state.drawings]
+            feature_collection = FeatureCollection(features)
+            geojson_str = json.dumps(feature_collection)
 
+            # Determina il nome del file in base alla lunghezza della lista dei disegni
+            default_file_name = "data.geojson" if len(st.session_state.drawings) == 1 else "multi_data.geojson"
+            file_name_col, download_col = st.columns(2)
+            with file_name_col:
+                file_name = st.text_input("Inserisci nome file", placeholder="Inserisci il nome del file", label_visibility="collapsed")
+                if not file_name:
+                    file_name = default_file_name
+                elif not file_name.endswith(".geojson"):
+                    file_name += ".geojson"
+
+                st.write("**LISTA AREE DISEGNATE**:")
+                st.json(st.session_state.drawings, expanded=False)
+        
+            with download_col:
+                # Aggiungi il pulsante per scaricare il file GeoJSON
+                st.download_button(
+                    label="Export GeoJSON file",
+                    data=geojson_str,
+                    file_name=file_name,
+                    mime="application/geo+json"
+                )
+    else:
+        st.write("""E' possibile scaricare l'immagine della mappa che viene visualizzato al momento a schermo.
+        Quindi se ci si sposta o si cambia la zoom verrà ottenuta una immagine diversa.
+        """)
         # Determina il nome del file in base alla lunghezza della lista dei disegni
-        default_file_name = "data.geojson" if len(st.session_state.drawings) == 1 else "multi_data.geojson"
+        default_file_name = "map_image.png"
         file_name_col, download_col = st.columns(2)
         with file_name_col:
-            file_name = st.text_input("", placeholder="Inserisci il nome del file", label_visibility="collapsed")
+            file_name = st.text_input("Inserisci nome file", placeholder="Inserisci il nome del file", label_visibility="collapsed")
             if not file_name:
                 file_name = default_file_name
-            elif not file_name.endswith(".geojson"):
-                file_name += ".geojson"
-
-            st.write("**LISTA AREE DISEGNATE**:")
-            st.json(st.session_state.drawings, expanded=False)
+            elif not file_name.endswith(".png"):
+                file_name += ".png"
     
         with download_col:
-            # Aggiungi il pulsante per scaricare il file GeoJSON
-            st.download_button(
-                label="Export GeoJSON file",
-                data=geojson_str,
-                file_name=file_name,
-                mime="application/geo+json"
-            )
+            # Estrai i bounds dall'oggetto st_component
+                bounds = st_component['bounds']
+                min_lat = bounds['_southWest']['lat']
+                min_lng = bounds['_southWest']['lng']
+                max_lat = bounds['_northEast']['lat']
+                max_lng = bounds['_northEast']['lng']
+                image_bounds = [min_lng, min_lat, max_lng, max_lat]
+
+                # Crea l'immagine della mappa
+                image_buf = create_map_image(image_bounds)
+                
+                # Aggiungi il pulsante per scaricare l'immagine
+                st.download_button(
+                    label="Download Map Image",
+                    data=image_buf,
+                    file_name=file_name,
+                    mime="image/png"
+                )
+    
