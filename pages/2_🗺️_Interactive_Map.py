@@ -217,8 +217,8 @@ with col1:
             'circlemarker': False,
         },
         edit_options={
-        'edit': False,
-        'remove': False
+        'edit': True,
+        'remove': True
     }
     )
     draw.add_to(m)
@@ -300,9 +300,7 @@ with col1:
             existing_drawings = []
 
         if last_drawing['geometry'] not in existing_drawings:
-            set_info_area(last_drawing, st_component)
-    
-            
+            set_info_area(last_drawing, st_component)       
 
 with col2:
     st.divider()
@@ -376,7 +374,8 @@ with col2:
                 label="Download Map Image",
                 data=st.session_state.image_buf,
                 file_name="map_image.png",
-                mime="image/png"
+                mime="image/png",
+                disabled=True
             )
             st.write("**LISTA AREE DISEGNATE**:")
             st.json(geojson_str, expanded=False)
