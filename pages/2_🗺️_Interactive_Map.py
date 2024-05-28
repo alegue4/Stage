@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_folium import st_folium
 import leafmap.foliumap as leafmap
 import folium
-from folium.plugins import Draw, Search
+from folium.plugins import Draw
 import json
 from geojson import Feature, FeatureCollection
 import time
@@ -111,13 +111,12 @@ def set_info_area(last_drawing, m):
         # Calcola i bounds e aggiorna il session state
         st.session_state.bounds = calculate_bounds(st.session_state.drawings)
 
-        center_lat = m['center']['lat']
-        center_lng = m['center']['lng']
-        zoom = m['zoom']
-        st.session_state.lat = center_lat
-        st.session_state.lon = center_lng
-        st.session_state.zoom = zoom
+        # Aggiorna lo stato della mappa senza rerun immediato
+        st.session_state.lat = m['center']['lat']
+        st.session_state.lon = m['center']['lng']
+        st.session_state.zoom = m['zoom']
         st.rerun()
+        
 
 st.set_page_config(layout="wide")
 st.sidebar.expander("Sidebar", expanded=True)
@@ -284,7 +283,7 @@ with col1:
     # che servirà per ottenere le diverse informazioni sui disegni/aree
     # selezionate nella mappa
     st_component = st_folium(m, height=600, use_container_width=True)
-    st.json(st_component, expanded=False)
+    st.json(st_component, expanded=True)
 
     # Questo if ottiene l'ultimo disegno/area selezionata nella mappa
     # interrativa. Se non esiste ancora un'area selezionata o se è già
@@ -292,6 +291,7 @@ with col1:
     # altrimenti viene aperto un experimental dialog nel quale vengono
     # inserite diverse informazioni come nome, ecc...
     if st_component.get('last_active_drawing') is not None:
+        print(st_component.get('last_active_drawing'))
         last_drawing = st_component['last_active_drawing']
         # Controlla se il disegno corrente è già stato salvato
         if 'drawings' in st.session_state:
@@ -300,7 +300,7 @@ with col1:
             existing_drawings = []
 
         if last_drawing['geometry'] not in existing_drawings:
-            set_info_area(last_drawing, st_component)       
+            set_info_area(last_drawing, st_component)      
 
 with col2:
     st.divider()
@@ -348,7 +348,8 @@ with col2:
         st.write("""E' possibile scaricare l'immagine della mappa che viene visualizzato al momento a schermo.
         Quindi se ci si sposta o si cambia la zoom verrà ottenuta una immagine diversa.
         """)
-        if st.button("Salva informazioni mappa attuale", use_container_width=True):
+        save_image_info_btn = st.button("Salva informazioni mappa attuale", use_container_width=True, disabled=True)
+        if save_image_info_btn:
             # Estrai i bounds e lo zoom dall'oggetto st_component
             zoom = st_component['zoom']
             center = st_component['center']
