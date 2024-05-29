@@ -5,75 +5,7 @@ import folium
 from folium.plugins import Draw
 import json
 from geojson import Feature, FeatureCollection
-import time
-import io
-import os
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
-def create_map_image(center, zoom, geojson_data):
-    lat, lon = center
-
-    # Crea Mappa iniziale con leafmap e il modulo foliumap e aggiunge il basemap SATELLITE
-    m = leafmap.Map(
-        locate_control=False,
-        scale_control=False,
-        plugin_LatLngPopup=False,
-        center=(lat, lon),
-        zoom=zoom,
-        draw_control=False,
-    )
-    m.add_basemap("SATELLITE")
-    # Definisci lo stile per le feature GeoJSON
-    style = {
-        "fillColor": "#3388ff",  # Colore di riempimento blu
-        "color": "#3388ff",      # Colore dei bordi blu
-        "weight": 2,             # Spessore dei bordi
-        "fillOpacity": 0.3       # Opacità di riempimento (30%)
-    }
-    if geojson_data:
-        m.add_geojson(json.loads(geojson_data), style=style)
-    # Salvare la mappa in un file HTML temporaneo
-    map_path = 'map.html'
-    m.save(map_path)
-
-    # Utilizzare selenium per fare uno screenshot della mappa
-    options = Options()
-    options.add_argument('--headless') # Avvia il browser senza interfaccia grafica
-    options.add_argument('--no-sandbox') # Disabilita sandbox del browser 
-    options.add_argument('--disable-dev-shm-usage') # Disabilita uso memoria condivisa
-    options.add_argument('--disable-gpu') # Disabilita accelerazione scheda video, non necessaria in mod. headless
-    options.add_argument('--window-size=800,800') # Dimensione finestra del browser
-    options.add_argument('--log-level=3')  # Supprime i log non necessari
-
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-
-    try:
-        driver.get('file://' + os.path.abspath(map_path))
-
-        # Attendere che la mappa sia completamente caricata
-        WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.CLASS_NAME, 'leaflet-tile'))
-        )
-
-        time.sleep(2)  # Aggiungi una breve pausa per assicurarti che tutte le tile siano caricate
-        img_data = driver.get_screenshot_as_png()
-    finally:
-        driver.quit()
-
-    # Salvare lo screenshot come buffer
-    buf = io.BytesIO(img_data)
-    buf.seek(0)
-
-    # Rimuovere il file HTML temporaneo
-    os.remove(map_path)
-
-    return buf
+from map_utils import create_map_image
 
 # Funzione per calcolare i bounds di tutte le aree inserite.
 # Questa funziona viene chiamata ogni volta che viene aggiunta una nuova area alla
@@ -99,22 +31,21 @@ def calculate_bounds(drawings):
 # e li salva nel session state in modo tale che alla chiusura del dialog la mappa 
 # rimanga ferma nell'ultima posizione in cui l'utente si è spostato sulla mappa.
 @st.experimental_dialog("Inserisci le informazioni per l'area selezionata")
-def set_info_area(last_drawing, m):
-    
+def set_info_area(last_drawing, st_component):
     name = st.text_input("Inserisci il nome dell'area selezionata")      
     if st.button("Salva Informazioni"):
         last_drawing['properties']['name'] = name
         if 'drawings' not in st.session_state:
             st.session_state.drawings = []
         st.session_state.drawings.append(last_drawing)
-
+        
         # Calcola i bounds e aggiorna il session state
         st.session_state.bounds = calculate_bounds(st.session_state.drawings)
 
         # Aggiorna lo stato della mappa senza rerun immediato
-        st.session_state.lat = m['center']['lat']
-        st.session_state.lon = m['center']['lng']
-        st.session_state.zoom = m['zoom']
+        st.session_state.lat = st_component['center']['lat']
+        st.session_state.lon = st_component['center']['lng']
+        st.session_state.zoom = st_component['zoom']
         st.rerun()
         
 
@@ -283,7 +214,7 @@ with col1:
     # che servirà per ottenere le diverse informazioni sui disegni/aree
     # selezionate nella mappa
     st_component = st_folium(m, height=600, use_container_width=True)
-    st.json(st_component, expanded=True)
+    # st.json(st_component, expanded=True)
 
     # Questo if ottiene l'ultimo disegno/area selezionata nella mappa
     # interrativa. Se non esiste ancora un'area selezionata o se è già
@@ -300,7 +231,14 @@ with col1:
             existing_drawings = []
 
         if last_drawing['geometry'] not in existing_drawings:
-            set_info_area(last_drawing, st_component)      
+            set_info_area(last_drawing, st_component)
+
+    remove_button = st.button("Cancella Aree inserite", disabled=not bool(st.session_state.get('drawings')))
+    # Logica per gestire il click sul pulsante
+    if remove_button:
+        st.session_state.drawings = []
+        st.session_state.bounds = None
+
 
 with col2:
     st.divider()
@@ -333,8 +271,9 @@ with col2:
                 elif not file_name.endswith(".geojson"):
                     file_name += ".geojson"
 
-                st.write("**LISTA AREE DISEGNATE**:")
-        
+            st.write("**LISTA AREE DISEGNATE**:")
+            st.json(geojson_str, expanded=False)
+
             with download_col:
                 # Aggiungi il pulsante per scaricare il file GeoJSON
                 st.download_button(
@@ -343,7 +282,7 @@ with col2:
                     file_name=file_name,
                     mime="application/geo+json"
                 )
-            st.json(geojson_str, expanded=False)
+            
     else:
         st.write("""E' possibile scaricare l'immagine della mappa che viene visualizzato al momento a schermo.
         Quindi se ci si sposta o si cambia la zoom verrà ottenuta una immagine diversa.
