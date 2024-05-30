@@ -1,5 +1,6 @@
 import streamlit as st
 
+# ============ DEFINIZIONE SIDEBAR E STRUTTURA PAGINA ===============
 
 st.set_page_config(layout="wide")
 st.sidebar.expander("Sidebar", expanded=True)
@@ -24,8 +25,6 @@ st.sidebar.info(
     """
 )
 
-
-# Title
 st.markdown("<h1 style='text-align: center;'>Home Page</p>", unsafe_allow_html=True)
 st.header("Introduzione")
 

@@ -7,6 +7,8 @@ import json
 from geojson import Feature, FeatureCollection
 from map_utils import create_map_image
 
+# ============ DICHIARAZIONE E DEFINIZIONE DI FUNZIONI ===============
+
 # Funzione per calcolare i bounds di tutte le aree inserite.
 # Questa funziona viene chiamata ogni volta che viene aggiunta una nuova area alla
 # mappa o quando viene inserito un file tramite il pulsante di import. Questo perchè
@@ -59,6 +61,8 @@ def update_session_state(last_drawing, st_component):
     st.session_state.lat = st_component['center']['lat']
     st.session_state.lon = st_component['center']['lng']
     st.session_state.zoom = st_component['zoom']
+
+# ============ DEFINIZIONE SIDEBAR E STRUTTURA PAGINA ===============
 
 st.set_page_config(layout="wide")
 st.sidebar.expander("Sidebar", expanded=True)
@@ -118,6 +122,8 @@ with import_export_col:
              il nome del file che si andrà a scaricare con il pulsante *Export*.
     """)
 
+# ============ INIZIALIZZAZIONE VALORI UTILI ===============
+
 # Quelle sotto sono le coordinate del dipartimento di informatica U14
 lat =  45.523840041350965
 lon = 9.21977690041348
@@ -127,12 +133,15 @@ zoom = 17
 if 'lat' not in st.session_state or 'lon' not in st.session_state:
     st.session_state.lat = lat  # coordinate iniziali
     st.session_state.lon = lon  # coordinate iniziali
+
 if 'zoom' not in st.session_state:
     st.session_state.zoom = zoom  # zoom iniziale 
 
 # Verifica se il toggle è presente nel session state, altrimenti lo inizializza
 if 'bounds_toggle' not in st.session_state:
     st.session_state.bounds_toggle = False
+
+# ============ CODICE PRINCIPALE DELLA PAGINA ===============
 
 col1, col2 = st.columns([5, 3])
 
@@ -162,8 +171,8 @@ with col1:
             'circlemarker': False,
         },
         edit_options={
-        'edit': True,
-        'remove': True
+        'edit': False,
+        'remove': False
     }
     )
     draw.add_to(m)
@@ -177,13 +186,15 @@ with col1:
         st.write("""Se il file inserito è uguale a quello precedente allora la mappa non viene modificata,
                  in quanto le aree disegnate in precedenza sono già state elaborate.
         """)
-        uploaded_file = st.file_uploader("Carica un file GeoJSON", type=["geojson"], key="file_uploader", help="Cliccare sul pulsante X per togliere il file inserito non cambia la mappa.")
+        uploaded_file = st.file_uploader("Carica un file GeoJSON", type=["geojson"], 
+                                         key="file_uploader", 
+                                         help="Cliccare sul pulsante X per togliere il file inserito non cambia la mappa.")
 
         if uploaded_file is not None:
             # Legge il contenuto del file GeoJSON
             geojson_data = json.load(uploaded_file)
             st.json(geojson_data, expanded=False)
-            # Copia il GeoJSON inserito per salvarlo in caso di inserimento di un nuovo GeoJSOn
+            # Copia il GeoJSON inserito per salvarlo in caso di inserimento di un nuovo GeoJSON
             current_file_content = json.dumps(geojson_data)
 
             # Se c'è un nuovo file caricato diverso da quello precedente allora la lista di aree dovrà essere
@@ -191,23 +202,27 @@ with col1:
             if 'last_uploaded_file' not in st.session_state or st.session_state.last_uploaded_file != current_file_content:
                 # Salva il contenuto del nuovo file caricato
                 st.session_state.last_uploaded_file = current_file_content
-                # Pulisce le aree precedenti
-                st.session_state.drawings = []
-                # Salva le nuove aree caricate nella lista delle aree disegnate
-                for feature in geojson_data['features']:
-                    st.session_state.drawings.append({
-                        'type': 'Feature',
-                        'geometry': feature['geometry'],
-                        'properties': feature['properties']
-                    })
                 
-                if st.session_state.bounds_toggle:
-                    # Calcola i bounds e aggiorna il session state
-                    st.session_state.bounds = calculate_bounds(st.session_state.drawings)
+                if 'features' not in geojson_data or not geojson_data['features']:
+                    st.session_state.drawings = []
                 else:
-                    # Rimuovi i bounds dal session state se il toggle è disattivato
-                    if 'bounds' in st.session_state:
-                        del st.session_state['bounds']
+                    # Pulisce le aree precedenti
+                    st.session_state.drawings = []
+                    # Salva le nuove aree caricate nella lista delle aree disegnate
+                    for feature in geojson_data['features']:
+                        st.session_state.drawings.append({
+                            'type': 'Feature',
+                            'geometry': feature['geometry'],
+                            'properties': feature['properties']
+                        })
+
+                    if st.session_state.bounds_toggle:
+                        # Calcola i bounds e aggiorna il session state
+                        st.session_state.bounds = calculate_bounds(st.session_state.drawings)
+                    else:
+                        # Rimuovi i bounds dal session state se il toggle è disattivato
+                        if 'bounds' in st.session_state:
+                            del st.session_state['bounds']
         else:
             st.session_state.last_uploaded_file = None
 
@@ -240,7 +255,7 @@ with col1:
     # che servirà per ottenere le diverse informazioni sui disegni/aree
     # selezionate nella mappa
     st_component = st_folium(m, height=600, use_container_width=True)
-    st.json(st_component, expanded=True)
+    # st.json(st_component, expanded=True)
 
     # Questo if ottiene l'ultimo disegno/area selezionata nella mappa
     # interrativa. Se non esiste ancora un'area selezionata o se è già
@@ -263,7 +278,12 @@ with col1:
     # Logica per gestire il click sul pulsante
     if remove_button:
         st.session_state.drawings = []
-        st.session_state.bounds = None
+        if 'bounds' in st.session_state:
+            del st.session_state['bounds']
+        st.session_state.lat = st_component['center']['lat']
+        st.session_state.lon = st_component['center']['lng']
+        st.session_state.zoom = st_component['zoom']
+        st.rerun()
 
 
 with col2:
