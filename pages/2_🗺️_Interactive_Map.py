@@ -30,24 +30,35 @@ def calculate_bounds(drawings):
 # Estrae la latitudine e la longitudine del centro attuale e lo zoom della mappa 
 # e li salva nel session state in modo tale che alla chiusura del dialog la mappa 
 # rimanga ferma nell'ultima posizione in cui l'utente si è spostato sulla mappa.
-@st.experimental_dialog("Inserisci le informazioni per l'area selezionata")
+@st.experimental_dialog("Inserisci le informazioni per l'area selezionata", )
 def set_info_area(last_drawing, st_component):
-    name = st.text_input("Inserisci il nome dell'area selezionata")      
-    if st.button("Salva Informazioni"):
-        last_drawing['properties']['name'] = name
-        if 'drawings' not in st.session_state:
-            st.session_state.drawings = []
-        st.session_state.drawings.append(last_drawing)
-        
-        # Calcola i bounds e aggiorna il session state
-        st.session_state.bounds = calculate_bounds(st.session_state.drawings)
+    name = st.text_input("Inserisci il nome dell'area selezionata")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Salva Informazioni"):
+            last_drawing['properties']['name'] = name
+            update_session_state(last_drawing, st_component)
+            st.experimental_rerun()
+    with col2:
+        if st.button("Salva senza Informazioni"):
+            update_session_state(last_drawing, st_component)
+            st.experimental_rerun()
 
-        # Aggiorna lo stato della mappa senza rerun immediato
-        st.session_state.lat = st_component['center']['lat']
-        st.session_state.lon = st_component['center']['lng']
-        st.session_state.zoom = st_component['zoom']
-        st.rerun()
-        
+# Funzione per aggiornare lo stato della sessione
+def update_session_state(last_drawing, st_component):
+    if 'drawings' not in st.session_state:
+        st.session_state.drawings = []
+    st.session_state.drawings.append(last_drawing)
+    
+    if st.session_state.bounds_toggle:
+        st.session_state.bounds = calculate_bounds(st.session_state.drawings)
+    else:
+        if 'bounds' in st.session_state:
+            del st.session_state['bounds']
+
+    st.session_state.lat = st_component['center']['lat']
+    st.session_state.lon = st_component['center']['lng']
+    st.session_state.zoom = st_component['zoom']
 
 st.set_page_config(layout="wide")
 st.sidebar.expander("Sidebar", expanded=True)
@@ -106,6 +117,7 @@ with import_export_col:
              mappa interattiva salvando anche le informazioni relative a ciascuna di esse (come nome, ecc.). E' inoltre possibile rinominare
              il nome del file che si andrà a scaricare con il pulsante *Export*.
     """)
+
 # Quelle sotto sono le coordinate del dipartimento di informatica U14
 lat =  45.523840041350965
 lon = 9.21977690041348
@@ -117,12 +129,15 @@ if 'lat' not in st.session_state or 'lon' not in st.session_state:
     st.session_state.lon = lon  # coordinate iniziali
 if 'zoom' not in st.session_state:
     st.session_state.zoom = zoom  # zoom iniziale 
-    
+
+# Verifica se il toggle è presente nel session state, altrimenti lo inizializza
+if 'bounds_toggle' not in st.session_state:
+    st.session_state.bounds_toggle = False
+
 col1, col2 = st.columns([5, 3])
 
 with col1:  
     st.subheader("Mappa")
-
     # Crea Mappa iniziale con leafmap e il modulo foliumap e aggiunge il
     # basemap SATELLITE
     # Creazione della mappa utilizzando leafmap.foliumap.Map
@@ -185,26 +200,37 @@ with col1:
                         'geometry': feature['geometry'],
                         'properties': feature['properties']
                     })
-                    
-                # Calcola i bounds e aggiorna il session state
-                st.session_state.bounds = calculate_bounds(st.session_state.drawings)
+                
+                if st.session_state.bounds_toggle:
+                    # Calcola i bounds e aggiorna il session state
+                    st.session_state.bounds = calculate_bounds(st.session_state.drawings)
+                else:
+                    # Rimuovi i bounds dal session state se il toggle è disattivato
+                    if 'bounds' in st.session_state:
+                        del st.session_state['bounds']
         else:
             st.session_state.last_uploaded_file = None
 
     # Questo if consente di avere un pop up quando si passa sopra
     # ad un'area disegnata mostrando il suo nome relativo inserito
     # in alla sua creazione. Per farlo cerca se è presente la lista
-    # di aree disegnate nel session state e se lo trova estrae il nome
-    # dalle properties e lo assegna alla relativa figura in modo tale
-    # che questo sia visibile al momento dell'hover dell'area selezionata 
+    # di aree disegnate nel session state e se la trova estrae il nome
+    # dalle properties di ciascuna e lo assegna alla relativa figura in modo tale
+    # che sia visibile al momento dell'hover dell'area selezionata 
     if 'drawings' in st.session_state:
         for drawing in st.session_state.drawings:
-            area_name = drawing['properties']['name']
-            tooltip_text = f"Nome: {area_name}"
-            folium.GeoJson(
-                drawing,
-                tooltip=tooltip_text  # Usa il testo formattato qui
-            ).add_to(m)
+            if 'properties' in drawing:
+                properties = drawing['properties']
+                if properties:
+                    popup_text = "<br>".join([f"{key}: {value}" for key, value in properties.items()])
+                    folium.GeoJson(
+                        drawing,
+                        tooltip=popup_text  # Usa il testo formattato qui
+                    ).add_to(m)
+                else:
+                    folium.GeoJson(drawing).add_to(m)
+            else:
+                folium.GeoJson(drawing).add_to(m)
 
     # Centra la mappa ai limiti delle coordinate
     if 'bounds' in st.session_state:
@@ -214,7 +240,7 @@ with col1:
     # che servirà per ottenere le diverse informazioni sui disegni/aree
     # selezionate nella mappa
     st_component = st_folium(m, height=600, use_container_width=True)
-    # st.json(st_component, expanded=True)
+    st.json(st_component, expanded=True)
 
     # Questo if ottiene l'ultimo disegno/area selezionata nella mappa
     # interrativa. Se non esiste ancora un'area selezionata o se è già
@@ -241,7 +267,8 @@ with col1:
 
 
 with col2:
-    st.divider()
+    st.session_state.bounds_toggle = st.toggle("Adatta limiti mappa per contenere tutte le aree", value=st.session_state.bounds_toggle)
+    
     col_title, col_select = st.columns(2)
     col_title.subheader("Export")
     export_selected = col_select.selectbox("Informazioni relative a", options=["Aree disegnate", "Mappa completa"])
@@ -250,7 +277,6 @@ with col2:
         l'area per rinominare il file e a destra il pulsante per esportare il relativo GeoJSON.
         Ricordare di premere *Invio* per confermare il nome del file.
         """)
-    
 
         # Questo if controlla se è presente una lista di disegni/aree selezionate e
         # dopo averli convertiti in un formato GeoJSON adeguato è possibile scaricare
