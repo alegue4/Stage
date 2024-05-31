@@ -8,7 +8,17 @@ from geojson import Feature, FeatureCollection
 from map_utils import create_map_image
 
 # ============ DICHIARAZIONE E DEFINIZIONE DI FUNZIONI ===============
-
+def initialize_session_state():
+    if 'lat' not in st.session_state:
+        st.session_state.lat = 45.523840041350965
+    if 'lon' not in st.session_state:
+        st.session_state.lon = 9.21977690041348
+    if 'zoom' not in st.session_state:
+        st.session_state.zoom = 17
+    if 'drawings' not in st.session_state:
+        st.session_state.drawings = []
+    if 'bounds_toggle' not in st.session_state:
+        st.session_state.bounds_toggle = False
 # Funzione per calcolare i bounds di tutte le aree inserite.
 # Questa funziona viene chiamata ogni volta che viene aggiunta una nuova area alla
 # mappa o quando viene inserito un file tramite il pulsante di import. Questo perchè
@@ -40,11 +50,11 @@ def set_info_area(last_drawing, st_component):
         if st.button("Salva Informazioni"):
             last_drawing['properties']['name'] = name
             update_session_state(last_drawing, st_component)
-            st.experimental_rerun()
+            st.rerun()
     with col2:
         if st.button("Salva senza Informazioni"):
             update_session_state(last_drawing, st_component)
-            st.experimental_rerun()
+            st.rerun()
 
 # Funzione per aggiornare lo stato della sessione
 def update_session_state(last_drawing, st_component):
@@ -124,22 +134,7 @@ with import_export_col:
 
 # ============ INIZIALIZZAZIONE VALORI UTILI ===============
 
-# Quelle sotto sono le coordinate del dipartimento di informatica U14
-lat =  45.523840041350965
-lon = 9.21977690041348
-zoom = 17
-# Imposta le coordinate iniziali e lo zoom se non sono già salvati
-# salvandoli successivamente nel session state
-if 'lat' not in st.session_state or 'lon' not in st.session_state:
-    st.session_state.lat = lat  # coordinate iniziali
-    st.session_state.lon = lon  # coordinate iniziali
-
-if 'zoom' not in st.session_state:
-    st.session_state.zoom = zoom  # zoom iniziale 
-
-# Verifica se il toggle è presente nel session state, altrimenti lo inizializza
-if 'bounds_toggle' not in st.session_state:
-    st.session_state.bounds_toggle = False
+initialize_session_state()
 
 # ============ CODICE PRINCIPALE DELLA PAGINA ===============
 
@@ -250,7 +245,9 @@ with col1:
     # Centra la mappa ai limiti delle coordinate
     if 'bounds' in st.session_state:
         m.fit_bounds(st.session_state.bounds)
-
+    else:
+        m.set_center(st.session_state.lon, st.session_state.lat, st.session_state.zoom)
+    
     # Viene ottenuto il componente streamlit_folium chiamato st_component
     # che servirà per ottenere le diverse informazioni sui disegni/aree
     # selezionate nella mappa
@@ -263,7 +260,6 @@ with col1:
     # altrimenti viene aperto un experimental dialog nel quale vengono
     # inserite diverse informazioni come nome, ecc...
     if st_component.get('last_active_drawing') is not None:
-        print(st_component.get('last_active_drawing'))
         last_drawing = st_component['last_active_drawing']
         # Controlla se il disegno corrente è già stato salvato
         if 'drawings' in st.session_state:
