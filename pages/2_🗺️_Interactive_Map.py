@@ -5,9 +5,14 @@ import folium
 from folium.plugins import Draw
 import json
 from geojson import Feature, FeatureCollection
-from map_utils import create_map_image
+from assets.map_utils import create_map_image
 
 # ============ DICHIARAZIONE E DEFINIZIONE DI FUNZIONI ===============
+
+# Funzione che viene chiamata all'inizio del corpo principale del codice 
+# per inizializzare i valori iniziali come latitudine e longitudine (coordinate
+# U14 Milano Bicocca), livello di zoom mappa, lista di aree/disegni e stato del
+# toggle nelle opzioni mappa
 def initialize_session_state():
     if 'lat' not in st.session_state:
         st.session_state.lat = 45.523840041350965
@@ -20,6 +25,9 @@ def initialize_session_state():
     if 'bounds_toggle' not in st.session_state:
         st.session_state.bounds_toggle = False
 
+# Funzione per creare mappa con il modulo foliumap di leafmap sulla quale
+# viene applicato il basemap satellite e l'interfaccia di disegno per 
+# poter interagire sopra di essa
 def create_map():
     # Crea Mappa iniziale con leafmap e il modulo foliumap e aggiunge il
     # basemap SATELLITE
@@ -139,6 +147,7 @@ def read_imported_geojson(uploaded_file):
 # ============ DEFINIZIONE SIDEBAR E STRUTTURA PAGINA ===============
 
 st.set_page_config(layout="wide")
+
 st.sidebar.expander("Sidebar", expanded=True)
 
 st.sidebar.title("About")
@@ -161,8 +170,7 @@ st.sidebar.info(
     """
 )
 
-# Title
-st.markdown("<h1 style='text-align: center;'>Interactive Map</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; margin-top: -60px;'>Interactive Map</h1>", unsafe_allow_html=True)
 st.header("Introduzione")
 
 st.write("""Questa pagina della Web App permette la visualizzazione di una mappa interattiva grazie alla libreria
@@ -269,7 +277,11 @@ with col1:
 
 with col2:
     with st.container(border=True):
-        new_toggle_value = st.toggle("Contieni aree inserite", value=st.session_state.bounds_toggle)
+        st.markdown("<h4 style='text-align: center; margin-top: -15px'>Controlli Mappa</h4>", unsafe_allow_html=True)
+        new_toggle_value = st.toggle("Mostra tutte le aree inserite", value=st.session_state.bounds_toggle, 
+                                     help="""Attiva l'opzione "Mostra tutte le aree inserite" per fare in modo che la mappa
+                                     si sposti automaticamente (all'aggiunta di una nuova area) in modo da rendere tutte le aree visibili. 
+                                     Se l'opzione è disattivata, la mappa invece rimarrà ferma all'ultima posizione.""")
         if new_toggle_value != st.session_state.bounds_toggle:
             st.session_state.bounds_toggle = new_toggle_value
             st.rerun()
@@ -285,6 +297,7 @@ with col2:
             st.rerun()
         remove_single_button = st.button("Cancella una singola area", disabled=True, use_container_width=True)
     with st.container(border=True):
+        st.markdown("<h4 style='text-align: center; margin-top: -15px'>Export</h4>", unsafe_allow_html=True)
         export_selected = st.selectbox("Informazioni relative a", options=["Aree disegnate", "Mappa completa"])
         if(export_selected == "Aree disegnate"):
             with st.expander(label="Mostra info aree disegnate (clicca per aprire/chiudere)"):
@@ -323,7 +336,7 @@ with col2:
                 st.json(geojson_str, expanded=False)
                       
         else:
-            with st.expander(label="Mostra info mappa completa (clicca per aprire/chiudere)", expanded=True):
+            with st.expander(label="Mostra info mappa completa (clicca per aprire/chiudere)"):
                 st.write("""E' possibile scaricare l'immagine della mappa che viene visualizzato al momento a schermo.
             Quindi se ci si sposta o si cambia la zoom verrà ottenuta una immagine diversa.
             """)

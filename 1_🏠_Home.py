@@ -25,7 +25,7 @@ st.sidebar.info(
     """
 )
 
-st.markdown("<h1 style='text-align: center;'>Home Page</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; margin-top: -60px;'>Home Map</h1>", unsafe_allow_html=True)
 st.header("Introduzione")
 
 st.write("""Questa Web App multipagina creata con [Streamlit](https://streamlit.io), mostra l'utilizzo di diverse librerie, 

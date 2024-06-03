@@ -123,7 +123,7 @@ uploaded_geojson = None
 last_static_map_image = None
 
 # Title
-st.markdown("<h1 style='text-align: center;'>Load File Page</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; margin-top: -60px;'>Load File Page</h1>", unsafe_allow_html=True)
 st.header("Introduzione")
 # Introduzione
 st.write("""In questa sezione della Web App è possibile caricare un file **GeoJSON** che 
