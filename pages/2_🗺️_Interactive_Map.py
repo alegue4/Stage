@@ -5,7 +5,6 @@ import folium
 from folium.plugins import Draw
 import json
 from geojson import Feature, FeatureCollection
-from assets.map_utils import create_map_image
 
 # ============ DICHIARAZIONE E DEFINIZIONE DI FUNZIONI ===============
 
@@ -86,9 +85,11 @@ def calculate_bounds(drawings):
 # rimanga ferma nell'ultima posizione in cui l'utente si è spostato sulla mappa.
 @st.experimental_dialog("Inserisci le informazioni per l'area selezionata")
 def set_info_area(last_drawing, st_component):
-    name = st.text_input("Inserisci il nome dell'area selezionata")
+    name = st.selectbox("Seleziona nome area selezionata", options=["Edificio", "Campo Agricolo", "Vegetazione", "Acqua", "Strada"], index=None)
     if st.button("Salva Informazioni"):
-        last_drawing['properties']['name'] = name
+        if not name: 
+            name = "Area Sconosciuta"  # Nome di default
+        last_drawing['properties']['name'] = name.lower()
         update_session_state(last_drawing, st_component)
         st.rerun()
 
@@ -171,46 +172,7 @@ st.sidebar.info(
 )
 
 st.markdown("<h1 style='text-align: center; margin-top: -60px;'>Interactive Map</h1>", unsafe_allow_html=True)
-st.header("Introduzione")
 
-st.write("""Questa pagina della Web App permette la visualizzazione di una mappa interattiva grazie alla libreria
-         di **Leafmap** con la possibilità di modificare, disegnare aree e salvare relative informazioni. Le 2 principali funzioni
-         di questa sezione sono:
-        """)
-st.write("""
-- **Esportazione** di un file in formato GeoJSON rappresentante le aree disegnate sulla mappa interattiva.
-- **Importazione** di un file GeoJSON salvato in precedenza per visualizzare a schermo le aree e le relative informazioni.
-""")
-map_col, import_col = st.columns([5, 3])
-with map_col:
-    st.subheader("Mappa")
-    st.write("""Sulla mappa interattiva è possibile utilizzare i diversi elementi di disegno e di ricerca forniti dall'interfaccia 
-    grafica di **Leafmap**. Gli elementi principali sono:
-    """)
-    st.write(""" 
-    - Pulsanti di ***Zoom in*** e ***Zoom out*** per fare zoom sulla mappa.
-             
-    - Pulsante ***Full Screen*** per visualizzare la mappa a schermo intero.
-    - Elemento ***Show where I am*** per attivare la geolocalizzazione e ottenere 
-    l'area approssimativa.
-    - Pulsante di ***Ricerca*** per ottenere un luogo o una via precisa.
-    - Elemento ***Draw a polygon*** per disegnare un poligoni con un numero di lati variabile.
-    - Elemento ***Draw a rectangle*** per disegnare un rettangoli di dimensione variabile.
-    """)
-with import_col:
-    st.subheader("Import")
-    st.write("""Nella sezione di **Import** è possibile caricare un file GeoJSON precedentemente salvato, in modo tale da visualizzare le
-             aree e le relative informazioni all'interno della mappa. È eventualmente possibile aggiungere nuove aree a quelle già presenti
-             e scaricare la lista aggiornata con il pulsante di *Export*.
-    """)
-    uploaded_file = st.file_uploader("Carica un file GeoJSON", type=["geojson"], 
-                                         key="file_uploader", 
-                                         help="Cliccare sul pulsante X per togliere il file inserito non cambia la mappa.")
-
-    if uploaded_file is not None:
-        read_imported_geojson(uploaded_file)
-    else:
-        st.session_state.last_uploaded_file = None
 # ============ INIZIALIZZAZIONE VALORI UTILI ===============
 
 # Funzione per inizializzare valori iniziali come latitudine,
@@ -218,94 +180,102 @@ with import_col:
 initialize_session_state()
 
 # ============ CODICE PRINCIPALE DELLA PAGINA ===============
-st.divider()
-col1, col2 = st.columns([7, 3])
 
-with col1:
-    # Mappa chiamata m ottenuta per creare una mappa con
-    # diverse impostazioni come zoom, basemap, layer di disegno 
-    m = create_map()
+with st.container(border=True):
+    col1, col2 = st.columns([6, 3])
+    with col1:
+        with col2:
+            with st.container(border=True):
+                st.markdown("<h4 style='text-align: center; margin-top: -15px'>Import</h4>", unsafe_allow_html=True)
+                #st.write("""Nella sezione di **Import** è possibile caricare un file GeoJSON precedentemente salvato, in modo tale da visualizzare le
+                #           aree e le relative informazioni all'interno della mappa. È eventualmente possibile aggiungere nuove aree a quelle già presenti
+                #          e scaricare la lista aggiornata con il pulsante di *Export*.
+                #""")
+                uploaded_file = st.file_uploader("Carica un file GeoJSON", type=["geojson"], 
+                                                        key="file_uploader", 
+                                                        help="""Il file GeoJSON deve contenere features e deve avere una struttura adeguata. 
+                                                        Cliccare sul pulsante X per togliere il file inserito non cambia la mappa.""")
 
-    # Questo if consente di avere un pop up quando si passa sopra
-    # ad un'area disegnata mostrando il suo nome relativo inserito
-    # in alla sua creazione. Per farlo cerca se è presente la lista
-    # di aree disegnate nel session state e se la trova estrae il nome
-    # dalle properties di ciascuna e lo assegna alla relativa figura in modo tale
-    # che sia visibile al momento dell'hover dell'area selezionata 
-    if 'drawings' in st.session_state:
-        for drawing in st.session_state.drawings:
-            if 'properties' in drawing:
-                properties = drawing['properties']
-                if properties:
-                    popup_text = "<br>".join([f"{key}: {value}" for key, value in properties.items()])
-                    folium.GeoJson(
-                        drawing,
-                        tooltip=popup_text  # Usa il testo formattato qui
-                    ).add_to(m)
+                if uploaded_file is not None:
+                    read_imported_geojson(uploaded_file)
+                else:
+                    st.session_state.last_uploaded_file = None
+        # Mappa chiamata m ottenuta per creare una mappa con
+        # diverse impostazioni come zoom, basemap, layer di disegno 
+        m = create_map()
+
+        # Questo if consente di avere un pop up quando si passa sopra
+        # ad un'area disegnata mostrando il suo nome relativo inserito
+        # in alla sua creazione. Per farlo cerca se è presente la lista
+        # di aree disegnate nel session state e se la trova estrae il nome
+        # dalle properties di ciascuna e lo assegna alla relativa figura in modo tale
+        # che sia visibile al momento dell'hover dell'area selezionata 
+        if 'drawings' in st.session_state:
+            for drawing in st.session_state.drawings:
+                if 'properties' in drawing:
+                    properties = drawing['properties']
+                    if properties:
+                        popup_text = "<br>".join([f"{key}: {value}" for key, value in properties.items()])
+                        folium.GeoJson(
+                            drawing,
+                            tooltip=popup_text  # Usa il testo formattato qui
+                        ).add_to(m)
+                    else:
+                        folium.GeoJson(drawing).add_to(m)
                 else:
                     folium.GeoJson(drawing).add_to(m)
-            else:
-                folium.GeoJson(drawing).add_to(m)
 
-    # Centra la mappa ai limiti delle coordinate
-    if 'bounds' in st.session_state:
-        m.fit_bounds(st.session_state.bounds)
-    else:
-        m.set_center(st.session_state.lon, st.session_state.lat, st.session_state.zoom)
-    
-    # Viene ottenuto il componente streamlit_folium chiamato st_component
-    # che servirà per ottenere le diverse informazioni sui disegni/aree
-    # selezionate nella mappa
-    st_component = st_folium(m, height=700, use_container_width=True)
-    # st.json(st_component, expanded=True)
-
-    # Questo if ottiene l'ultimo disegno/area selezionata nella mappa
-    # interrativa. Se non esiste ancora un'area selezionata o se è già
-    # stata inserita nella lista finale allora non deve fare operazioni,
-    # altrimenti viene aperto un experimental dialog nel quale vengono
-    # inserite diverse informazioni come nome, ecc...
-    if st_component.get('last_active_drawing') is not None:
-        last_drawing = st_component['last_active_drawing']
-        # Controlla se il disegno corrente è già stato salvato
-        if 'drawings' in st.session_state:
-            existing_drawings = [d['geometry'] for d in st.session_state.drawings]
+        # Centra la mappa ai limiti delle coordinate
+        if 'bounds' in st.session_state:
+            m.fit_bounds(st.session_state.bounds)
         else:
-            existing_drawings = []
+            m.set_center(st.session_state.lon, st.session_state.lat, st.session_state.zoom)
+        
+        # Viene ottenuto il componente streamlit_folium chiamato st_component
+        # che servirà per ottenere le diverse informazioni sui disegni/aree
+        # selezionate nella mappa
+        st_component = st_folium(m, use_container_width=True)
+        # st.json(st_component, expanded=True)
 
-        if last_drawing['geometry'] not in existing_drawings:
-            set_info_area(last_drawing, st_component)
+        # Questo if ottiene l'ultimo disegno/area selezionata nella mappa
+        # interrativa. Se non esiste ancora un'area selezionata o se è già
+        # stata inserita nella lista finale allora non deve fare operazioni,
+        # altrimenti viene aperto un experimental dialog nel quale vengono
+        # inserite diverse informazioni come nome, ecc...
+        if st_component.get('last_active_drawing') is not None:
+            last_drawing = st_component['last_active_drawing']
+            # Controlla se il disegno corrente è già stato salvato
+            if 'drawings' in st.session_state:
+                existing_drawings = [d['geometry'] for d in st.session_state.drawings]
+            else:
+                existing_drawings = []
 
-with col2:
-    with st.container(border=True):
-        st.markdown("<h4 style='text-align: center; margin-top: -15px'>Controlli Mappa</h4>", unsafe_allow_html=True)
-        new_toggle_value = st.toggle("Mostra tutte le aree inserite", value=st.session_state.bounds_toggle, 
-                                     help="""Attiva l'opzione "Mostra tutte le aree inserite" per fare in modo che la mappa
-                                     si sposti automaticamente (all'aggiunta di una nuova area) in modo da rendere tutte le aree visibili. 
-                                     Se l'opzione è disattivata, la mappa invece rimarrà ferma all'ultima posizione.""")
-        if new_toggle_value != st.session_state.bounds_toggle:
-            st.session_state.bounds_toggle = new_toggle_value
-            st.rerun()
-        remove_all_button = st.button("Cancella tutte le aree inserite", disabled=not bool(st.session_state.get('drawings')), use_container_width=True)
-        # Logica per gestire il click sul pulsante
-        if remove_all_button:
-            st.session_state.drawings = []
-            if 'bounds' in st.session_state:
-                del st.session_state['bounds']
-            st.session_state.lat = st_component['center']['lat']
-            st.session_state.lon = st_component['center']['lng']
-            st.session_state.zoom = st_component['zoom']
-            st.rerun()
-        remove_single_button = st.button("Cancella una singola area", disabled=True, use_container_width=True)
-    with st.container(border=True):
-        st.markdown("<h4 style='text-align: center; margin-top: -15px'>Export</h4>", unsafe_allow_html=True)
-        export_selected = st.selectbox("Informazioni relative a", options=["Aree disegnate", "Mappa completa"])
-        if(export_selected == "Aree disegnate"):
-            with st.expander(label="Mostra info aree disegnate (clicca per aprire/chiudere)"):
-                st.write("""È possibile scaricare il file GeoJSON che rappresenta la lista delle aree disegnate sulla
-                mappa interattiva salvando anche le informazioni relative a ciascuna di esse (come nome, ecc.). È inoltre possibile rinominare
-                il nome del file che si andrà a scaricare con il pulsante chiamato *Export GeoJSON file*.
-                """)
-                st.info("Premere pulsante *Invio* per confermare il nome del file scelto", icon="ℹ")
+            if last_drawing['geometry'] not in existing_drawings:
+                set_info_area(last_drawing, st_component)
+
+    with col2:
+        with st.container(border=True):
+            st.markdown("<h4 style='text-align: center; margin-top: -15px'>Controlli Mappa</h4>", unsafe_allow_html=True)
+            new_toggle_value = st.toggle("Contieni tutte le aree inserite", value=st.session_state.bounds_toggle, 
+                                        help="""Attiva l'opzione "Contieni tutte le aree inserite" per fare in modo che la mappa
+                                        si sposti automaticamente (all'aggiunta di una nuova area) in modo da rendere tutte le aree visibili. 
+                                        Se l'opzione è disattivata, la mappa invece rimarrà ferma all'ultima posizione.""")
+            if new_toggle_value != st.session_state.bounds_toggle:
+                st.session_state.bounds_toggle = new_toggle_value
+                st.rerun()
+            remove_all_button = st.button("Cancella tutte le aree inserite", disabled=not bool(st.session_state.get('drawings')), use_container_width=True)
+            # Logica per gestire il click sul pulsante
+            if remove_all_button:
+                st.session_state.drawings = []
+                if 'bounds' in st.session_state:
+                    del st.session_state['bounds']
+                st.session_state.lat = st_component['center']['lat']
+                st.session_state.lon = st_component['center']['lng']
+                st.session_state.zoom = st_component['zoom']
+                st.rerun()
+            remove_single_button = st.button("Cancella una singola area", disabled=True, use_container_width=True)
+        with st.container(border=True):
+            st.markdown("<h4 style='text-align: center; margin-top: -15px'>Export</h4>", unsafe_allow_html=True)
             # Questo if controlla se è presente una lista di disegni/aree selezionate e
             # dopo averli convertiti in un formato GeoJSON adeguato è possibile scaricare
             # il file contenente tutte le informazioni.
@@ -317,7 +287,9 @@ with col2:
 
                 # Determina il nome del file in base alla lunghezza della lista dei disegni
                 default_file_name = "data.geojson" if len(st.session_state.drawings) == 1 else "multi_data.geojson"
-                file_name = st.text_input("Inserisci nome file", placeholder="Inserisci il nome del file", label_visibility="collapsed")
+                file_name = st.text_input("Inserisci nome file", help="""Il nome che verrà inserito rappresenterà il nome del file
+                                          nel quale verrà rinominato il file esportato. IMPORTANTE premere il pulsante *Invio* per 
+                                          confermare il nome inserito.""")
                 if not file_name:
                     file_name = default_file_name
                 elif not file_name.endswith(".geojson"):
@@ -332,45 +304,32 @@ with col2:
                     use_container_width=True
                 )
 
-                st.write("**LISTA AREE DISEGNATE**:")
+                # st.write("**LISTA AREE DISEGNATE**:")
                 st.json(geojson_str, expanded=False)
-                      
-        else:
-            with st.expander(label="Mostra info mappa completa (clicca per aprire/chiudere)"):
-                st.write("""E' possibile scaricare l'immagine della mappa che viene visualizzato al momento a schermo.
-            Quindi se ci si sposta o si cambia la zoom verrà ottenuta una immagine diversa.
-            """)
-            save_image_info_btn = st.button("Salva informazioni mappa attuale", use_container_width=True, disabled=True)
-            if save_image_info_btn:
-                # Estrai i bounds e lo zoom dall'oggetto st_component
-                zoom = st_component['zoom']
-                center = st_component['center']
-                center_lat = center['lat']
-                center_lon = center['lng']
-                image_center = [center_lat, center_lon]
 
-                geojson_str = None
-                if 'drawings' in st.session_state:
-                    # Converti i disegni in formato GeoJSON
-                    features = [Feature(geometry=drawing['geometry'], properties=drawing['properties']) for drawing in st.session_state.drawings]
-                    feature_collection = FeatureCollection(features)
-                    geojson_str = json.dumps(feature_collection)
-                progress_text = "Ottenendo immagine mappa. Potrebbe richiedere un po' di secondi..."
+st.header("Introduzione")
 
-                with st.spinner(progress_text):
-                    # Crea l'immagine della mappa
-                    image_buf = create_map_image(image_center, zoom, geojson_str)
-                    st.session_state.image_buf = image_buf
-                
-                # Aggiungi il pulsante per scaricare l'immagine
-                st.download_button(
-                    label="Download Map Image",
-                    data=st.session_state.image_buf,
-                    file_name="map_image.png",
-                    mime="image/png",
-                    disabled=True,
-                    use_container_width=True
-                )
-                st.write("**LISTA AREE DISEGNATE**:")
-                st.json(geojson_str, expanded=False)
+st.write("""Questa pagina della Web App permette la visualizzazione di una mappa interattiva grazie alla libreria
+         di **Leafmap** con la possibilità di modificare, disegnare aree e salvare relative informazioni. Le 2 principali funzioni
+         di questa sezione sono:
+        """)
+st.write("""
+- **Esportazione** di un file in formato GeoJSON rappresentante le aree disegnate sulla mappa interattiva.
+- **Importazione** di un file GeoJSON salvato in precedenza per visualizzare a schermo le aree e le relative informazioni.
+""")
+
+st.subheader("Mappa")
+st.write("""Sulla mappa interattiva è possibile utilizzare i diversi elementi di disegno e di ricerca forniti dall'interfaccia 
+grafica di **Leafmap**. Gli elementi principali sono:
+""")
+st.write(""" 
+- Pulsanti di ***Zoom in*** e ***Zoom out*** per fare zoom sulla mappa.
+        
+- Pulsante ***Full Screen*** per visualizzare la mappa a schermo intero.
+- Elemento ***Show where I am*** per attivare la geolocalizzazione e ottenere 
+l'area approssimativa.
+- Pulsante di ***Ricerca*** per ottenere un luogo o una via precisa.
+- Elemento ***Draw a polygon*** per disegnare un poligoni con un numero di lati variabile.
+- Elemento ***Draw a rectangle*** per disegnare un rettangoli di dimensione variabile.
+""")
 
