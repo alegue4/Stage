@@ -23,6 +23,8 @@ def initialize_session_state():
         st.session_state.drawings = []
     if 'bounds_toggle' not in st.session_state:
         st.session_state.bounds_toggle = False
+    if 'last_object_clicked' not in st.session_state:
+        st.session_state.last_object_clicked = None
 
 # Funzione per creare mappa con il modulo foliumap di leafmap sulla quale
 # viene applicato il basemap satellite e l'interfaccia di disegno per 
@@ -85,7 +87,9 @@ def calculate_bounds(drawings):
 # rimanga ferma nell'ultima posizione in cui l'utente si è spostato sulla mappa.
 @st.experimental_dialog("Inserisci le informazioni per l'area selezionata")
 def set_info_area(last_drawing, st_component):
-    name = st.selectbox("Seleziona nome area selezionata", options=["Edificio", "Campo Agricolo", "Vegetazione", "Acqua", "Strada"], index=None)
+    name = st.selectbox("Seleziona nome area selezionata", 
+                        options=["Edificio", "Campo Agricolo", "Vegetazione", "Acqua", "Strada"], 
+                        index=None)
     if st.button("Salva Informazioni"):
         if not name: 
             name = "Area Sconosciuta"  # Nome di default
@@ -108,7 +112,7 @@ def update_session_state(last_drawing, st_component):
     st.session_state.lat = st_component['center']['lat']
     st.session_state.lon = st_component['center']['lng']
     st.session_state.zoom = st_component['zoom']
-
+        
 # Funzione che legge e analizza il contenuto del file GeoJSON 
 # importato all'interno del file uploader
 def read_imported_geojson(uploaded_file):
@@ -216,9 +220,12 @@ with st.container(border=True):
                     properties = drawing['properties']
                     if properties:
                         popup_text = "<br>".join([f"{key}: {value}" for key, value in properties.items()])
+                        # TODO: Dentro il folium.GeoJson si puoò aggiungere style_function per assegnare un colore
+                        # Magari si può fare assegnadogli un colore rosso se il drawing è selezionato, guarda doc
+                        # di folium per il geojson
                         folium.GeoJson(
                             drawing,
-                            tooltip=popup_text  # Usa il testo formattato qui
+                            tooltip=popup_text
                         ).add_to(m)
                     else:
                         folium.GeoJson(drawing).add_to(m)
@@ -235,7 +242,7 @@ with st.container(border=True):
         # che servirà per ottenere le diverse informazioni sui disegni/aree
         # selezionate nella mappa
         st_component = st_folium(m, use_container_width=True)
-        # st.json(st_component, expanded=True)
+        st.json(st_component, expanded=True)
 
         # Questo if ottiene l'ultimo disegno/area selezionata nella mappa
         # interrativa. Se non esiste ancora un'area selezionata o se è già
@@ -253,6 +260,13 @@ with st.container(border=True):
             if last_drawing['geometry'] not in existing_drawings:
                 set_info_area(last_drawing, st_component)
 
+        if st_component.get('last_object_clicked') is not None:
+            # TODO: Qua forse bisogna aggiungere la logica per ottenere l'oggetto
+            # feature cioè l'oggetto feature. Per ora si ottengono solo le
+            # coordinate del punto cliccato sull'oggetto
+            st.session_state.last_object_clicked = st_component['last_object_clicked']
+            
+
     with col2:
         with st.container(border=True):
             st.markdown("<h4 style='text-align: center; margin-top: -15px'>Controlli Mappa</h4>", unsafe_allow_html=True)
@@ -263,17 +277,34 @@ with st.container(border=True):
             if new_toggle_value != st.session_state.bounds_toggle:
                 st.session_state.bounds_toggle = new_toggle_value
                 st.rerun()
-            remove_all_button = st.button("Cancella tutte le aree inserite", disabled=not bool(st.session_state.get('drawings')), use_container_width=True)
-            # Logica per gestire il click sul pulsante
-            if remove_all_button:
-                st.session_state.drawings = []
-                if 'bounds' in st.session_state:
-                    del st.session_state['bounds']
-                st.session_state.lat = st_component['center']['lat']
-                st.session_state.lon = st_component['center']['lng']
-                st.session_state.zoom = st_component['zoom']
-                st.rerun()
-            remove_single_button = st.button("Cancella una singola area", disabled=True, use_container_width=True)
+
+            delete_select = st.selectbox("Seleziona opzione di cancellazione", options=["Cancella singola area", "Cancella tutte le aree", "Cancella aree per tipologia"])
+            if delete_select == "Cancella singola area":
+                st.info("Clicca su un'area per selezionarla")
+                if(st.session_state.last_object_clicked is None):
+                    st.write("Nessuna area selezionata")
+                else:
+                    st.write(st.session_state.last_object_clicked)
+                # Pulsante per rimuovere un'area inserita specifica e sua logica
+                remove_single_area_button = st.button("Cancella una singola area", disabled=not bool(st.session_state.get('drawings')), use_container_width=True)
+                # if remove_single_area_button:
+            elif delete_select == "Cancella tutte le aree":
+                # Pulsante per rimuovere tutte le aree inserite e sua logica
+                remove_all_button = st.button("Cancella tutte le aree inserite", disabled=not bool(st.session_state.get('drawings')), use_container_width=True)
+                if remove_all_button:
+                    st.session_state.drawings = []
+                    if 'bounds' in st.session_state:
+                        del st.session_state['bounds']
+                    if 'last_object_clicked' in st.session_state:
+                        del st.session_state['last_object_clicked']
+                    st.session_state.lat = st_component['center']['lat']
+                    st.session_state.lon = st_component['center']['lng']
+                    st.session_state.zoom = st_component['zoom']
+                    st.rerun()
+            else:
+                remove_area_button = st.button("Cancella aree", disabled=not bool(st.session_state.get('drawings')), use_container_width=True)
+
+
         with st.container(border=True):
             st.markdown("<h4 style='text-align: center; margin-top: -15px'>Export</h4>", unsafe_allow_html=True)
             # Questo if controlla se è presente una lista di disegni/aree selezionate e
@@ -286,7 +317,11 @@ with st.container(border=True):
                 geojson_str = json.dumps(feature_collection)
 
                 # Determina il nome del file in base alla lunghezza della lista dei disegni
-                default_file_name = "data.geojson" if len(st.session_state.drawings) == 1 else "multi_data.geojson"
+                default_file_name = "data.geojson"
+                if len(st.session_state.drawings) == 0:
+                    default_file_name = "empty.geojson"
+                elif len(st.session_state.drawings) > 1:
+                    default_file_name = "multi_data.geojson"
                 file_name = st.text_input("Inserisci nome file", help="""Il nome che verrà inserito rappresenterà il nome del file
                                           nel quale verrà rinominato il file esportato. IMPORTANTE premere il pulsante *Invio* per 
                                           confermare il nome inserito.""")
