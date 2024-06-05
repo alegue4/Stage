@@ -179,12 +179,10 @@ def is_inside_polygon(lat, lng, coordinates):
     return is_inside
 
 def remove_areas(drawings):
-    for feature in drawings:
-        # Se troviamo una feature uguale a quella cliccata, la rimuoviamo dalla lista
-        if feature in st.session_state.feature_clicked_list:
-            drawings.remove(feature)
+    # Creiamo una nuova lista che conterrà solo i disegni non selezionati
+    updated_drawings = [feature for feature in drawings if feature not in st.session_state.feature_clicked_list]
     
-    return drawings
+    return updated_drawings
 # ============ DEFINIZIONE SIDEBAR E STRUTTURA PAGINA ===============
 
 st.set_page_config(layout="wide")
@@ -309,8 +307,15 @@ with st.container(border=True):
         if st_component.get('last_object_clicked') is not None:
             last_object_clicked_coordinates = st_component['last_object_clicked']
             feature_clicked = find_feature(last_object_clicked_coordinates, st.session_state.drawings)
-            st.session_state.feature_clicked_list.append(feature_clicked)
-            st.rerun()
+            if feature_clicked not in st.session_state.feature_clicked_list:
+                st.session_state.feature_clicked_list.append(feature_clicked)
+                st.rerun()
+            else:
+                st.session_state.feature_clicked_list.remove(feature_clicked)
+                st.rerun()
+
+        # st.write(st.session_state.feature_clicked_list)
+        # st.write(st.session_state.drawings)
             
     with col2:
         with st.container(border=True):
@@ -328,17 +333,15 @@ with st.container(border=True):
                                          placeholder="Scegli un'opzione")
             if delete_select == "Cancella aree tramite selezione":
                 st.info("Clicca su un'area per selezionarla")
-
                 # Pulsante per rimuovere un'area inserita specifica e sua logica
                 remove_single_area_button = st.button("Cancella una o più aree", disabled=not bool(st.session_state.get('feature_clicked_list')), use_container_width=True)
                 # st.write(st.session_state.drawings)
                 if remove_single_area_button:
                     drawings = remove_areas(st.session_state.drawings)
                     st.session_state.drawings = drawings
-                    st.session_state.bounds = calculate_bounds(st.session_state.drawings)
+                    # st.session_state.bounds = calculate_bounds(st.session_state.drawings)
                     st.session_state.feature_clicked_list = []
-                    st.rerun()
-                    
+                    st.rerun() 
 
             elif delete_select == "Cancella aree per tipologia":
                 remove_area_button = st.button("Cancella aree", disabled=not bool(st.session_state.get('drawings')), use_container_width=True)
@@ -348,7 +351,7 @@ with st.container(border=True):
                 remove_all_button = st.button("Cancella tutte le aree inserite", disabled=not bool(st.session_state.get('drawings')), use_container_width=True)
                 if remove_all_button:
                     st.session_state.drawings = []
-                    st.session_statefeature_clicked_list = []
+                    st.session_state.feature_clicked_list = []
                     if 'bounds' in st.session_state:
                         del st.session_state['bounds']     
                     st.session_state.lat = st_component['center']['lat']
