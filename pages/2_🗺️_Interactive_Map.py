@@ -5,7 +5,6 @@ import folium
 from folium.plugins import Draw
 import json
 from geojson import Feature, FeatureCollection
-import time
 
 # ============ DICHIARAZIONE E DEFINIZIONE DI FUNZIONI ===============
 
@@ -151,18 +150,25 @@ def read_imported_geojson(uploaded_file):
         st.error("Errore nella lettura del file GeoJSON. Assicurati che il file sia in un formato valido.")
         st.session_state.drawings = []
 
+# Funzione avente 2 parametri, le coordinate del punto cliccato all'interno
+# di un'area presente sulla mappa, e la lista completa di disegni.
+# Basandosi sul metodo is_inside_polygon scorre tutta la lista per trovare 
+# la feature esatta e la ritorna al chiamante
 def find_feature(last_object_clicked, drawings):
     lat = last_object_clicked['lat']
     lng = last_object_clicked['lng']
     
     for feature in drawings:
-        coordinates = feature['geometry']['coordinates'][0]  # Estraiamo le coordinate del poligono
-        # Verifica se le coordinate sono all'interno della feature
+        coordinates = feature['geometry']['coordinates'][0]  # Per estrarre coordinate del poligono
         if is_inside_polygon(lat, lng, coordinates):
             return feature
 
     return None
 
+# Funzione che ha come parametri latitudine e longitudine del punto cliccato,
+# le quali vengono confrontate con le coordinate dei vertici del poligono 
+# per vedere se queste sono presenti al suo interno. Se sì significa che il punto
+# cliccato è corrispondente alla feature. Viene utilizzato l'algoritmo di Ray Casting
 def is_inside_polygon(lat, lng, coordinates):
     # Utilizza l'algoritmo di Ray Casting per verificare se le coordinate sono all'interno del poligono
     num_vertices = len(coordinates)
@@ -178,14 +184,19 @@ def is_inside_polygon(lat, lng, coordinates):
 
     return is_inside
 
+# Funzione che rimuove dalla lista totale di disegni importati o inseriti
+# tutti quelli che l'utente seleziona. Visibili a schermo perchè cambiano colore
 def remove_areas(drawings):
     # Viene creata una nuova lista che conterrà solo i disegni non selezionati
     updated_drawings = [feature for feature in drawings if feature not in st.session_state.feature_clicked_list]
     return updated_drawings
 
+# Funzione che rimuove dalla lista tutti i disegni con la tipologia 
+# specificata, sia che l'insieme di tipologie sia singolo che multiplo.
 def remove_areas_by_name(drawings, selected_names):
     filtered_drawings = [feature for feature in drawings if feature['properties']['name'] not in selected_names]
     return filtered_drawings
+
 # ============ DEFINIZIONE SIDEBAR E STRUTTURA PAGINA ===============
 
 st.set_page_config(layout="wide")
@@ -224,6 +235,7 @@ initialize_session_state()
 
 with st.container(border=True):
     col1, col2 = st.columns([6, 3])
+    # Nella colonna col1 è presente la sezione riguardante la mappa
     with col1:
         with col2:
             with st.container(border=True):
@@ -316,7 +328,8 @@ with st.container(border=True):
             else:
                 st.session_state.feature_clicked_list.remove(feature_clicked)
                 st.rerun()
-            
+
+    # Nella colonna col2 è presente la sezione riguardante le opzioni e l'export della mappa     
     with col2:
         with st.container(border=True):
             st.markdown("<h4 style='text-align: center; margin-top: -15px'>Controlli Mappa</h4>", unsafe_allow_html=True)
@@ -407,6 +420,8 @@ with st.container(border=True):
                 #st.write(st.session_state.drawings)
                 st.json(geojson_str, expanded=False)
 
+
+# --------- PARTE DESCRITTIVA --------------
 st.header("Introduzione")
 
 st.write("""Questa pagina della Web App permette la visualizzazione di una mappa interattiva grazie alla libreria
