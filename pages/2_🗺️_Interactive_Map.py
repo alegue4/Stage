@@ -179,10 +179,13 @@ def is_inside_polygon(lat, lng, coordinates):
     return is_inside
 
 def remove_areas(drawings):
-    # Creiamo una nuova lista che conterrà solo i disegni non selezionati
+    # Viene creata una nuova lista che conterrà solo i disegni non selezionati
     updated_drawings = [feature for feature in drawings if feature not in st.session_state.feature_clicked_list]
-    
     return updated_drawings
+
+def remove_areas_by_name(drawings, selected_names):
+    filtered_drawings = [feature for feature in drawings if feature['properties']['name'] not in selected_names]
+    return filtered_drawings
 # ============ DEFINIZIONE SIDEBAR E STRUTTURA PAGINA ===============
 
 st.set_page_config(layout="wide")
@@ -313,9 +316,6 @@ with st.container(border=True):
             else:
                 st.session_state.feature_clicked_list.remove(feature_clicked)
                 st.rerun()
-
-        # st.write(st.session_state.feature_clicked_list)
-        # st.write(st.session_state.drawings)
             
     with col2:
         with st.container(border=True):
@@ -331,9 +331,10 @@ with st.container(border=True):
             delete_select = st.selectbox("Seleziona opzione di cancellazione", 
                                          options=["Cancella aree tramite selezione", "Cancella aree per tipologia", "Cancella tutte le aree"],
                                          placeholder="Scegli un'opzione")
+            
+            # Caso in cui si sceglie l'eliminazione di aree per selezione (click sull'area)
             if delete_select == "Cancella aree tramite selezione":
                 st.info("Clicca su un'area per selezionarla")
-                # Pulsante per rimuovere un'area inserita specifica e sua logica
                 remove_single_area_button = st.button("Cancella una o più aree", disabled=not bool(st.session_state.get('feature_clicked_list')), use_container_width=True)
                 # st.write(st.session_state.drawings)
                 if remove_single_area_button:
@@ -343,11 +344,21 @@ with st.container(border=True):
                     st.session_state.feature_clicked_list = []
                     st.rerun() 
 
+            # Caso in cui si sceglie eliminazione per tipologia (per properties: name)
             elif delete_select == "Cancella aree per tipologia":
-                remove_area_button = st.button("Cancella aree", disabled=not bool(st.session_state.get('drawings')), use_container_width=True)
+                name_area = st.multiselect("Seleziona una o più tipologia di aree da cancellare", 
+                                           options=["Edificio", "Campo Agricolo", "Vegetazione", "Acqua", "Strada"],
+                                           placeholder="Scegli un'opzione")
+                name_area_correct = [name.lower() for name in name_area]
+                # st.write(name_area_correct)
+                remove_area_by_name_button = st.button("Cancella aree", disabled=not bool(st.session_state.get('drawings')), use_container_width=True)
+                if remove_area_by_name_button:
+                    drawings = remove_areas_by_name(st.session_state.drawings, name_area_correct)
+                    st.session_state.drawings = drawings
+                    st.rerun()
 
+            # Caso in cui si sceglie eliminazione totale di tutte le aree inserite
             else:
-                # Pulsante per rimuovere tutte le aree inserite e sua logica
                 remove_all_button = st.button("Cancella tutte le aree inserite", disabled=not bool(st.session_state.get('drawings')), use_container_width=True)
                 if remove_all_button:
                     st.session_state.drawings = []
@@ -393,7 +404,7 @@ with st.container(border=True):
                     use_container_width=True
                 )
 
-                # st.write("**LISTA AREE DISEGNATE**:")
+                #st.write(st.session_state.drawings)
                 st.json(geojson_str, expanded=False)
 
 st.header("Introduzione")
