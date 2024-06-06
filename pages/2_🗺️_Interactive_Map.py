@@ -329,6 +329,9 @@ with st.container(border=True):
                 st.session_state.feature_clicked_list.remove(feature_clicked)
                 st.rerun()
 
+        # st.json(st.session_state.last_uploaded_file)
+        st.write(st.session_state.drawings)
+
     # Nella colonna col2 è presente la sezione riguardante le opzioni e l'export della mappa     
     with col2:
         with st.container(border=True):
@@ -347,7 +350,7 @@ with st.container(border=True):
             
             # Caso in cui si sceglie l'eliminazione di aree per selezione (click sull'area)
             if delete_select == "Cancella aree tramite selezione":
-                st.info("Clicca su un'area per selezionarla")
+                st.info("Clicca su un'area per selezionarla/deselezionarla")
                 remove_single_area_button = st.button("Cancella una o più aree", disabled=not bool(st.session_state.get('feature_clicked_list')), use_container_width=True)
                 # st.write(st.session_state.drawings)
                 if remove_single_area_button:
