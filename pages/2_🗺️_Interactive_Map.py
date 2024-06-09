@@ -120,14 +120,22 @@ def read_imported_geojson(uploaded_file):
     try:
         # Legge il contenuto del file GeoJSON
         geojson_data = json.load(uploaded_file)
-
+        # st.write(geojson_data)
+        
         # Verifica se il file GeoJSON contiene delle features
         if 'features' not in geojson_data or not geojson_data['features']:
             st.error("Il file GeoJSON caricato non contiene aree selezionate (features). Per favore carica un file valido.")
             st.session_state.drawings = []
         else:
-            # Copia il GeoJSON inserito per salvarlo in caso di inserimento di un nuovo GeoJSON
+            # Converte il geojson, passato come input, in una stringa
             current_file_content = json.dumps(geojson_data)
+            # st.write(current_file_content)
+
+            # Converte la lista drawings in formato GeoJSON e lo converte in una stringa
+            # per confrontarlo con il file di input
+            features = [Feature(geometry=drawing['geometry'], properties=drawing['properties']) for drawing in st.session_state.drawings]
+            feature_collection = FeatureCollection(features)
+            geojson_str = json.dumps(feature_collection)
 
             # Se c'è un nuovo file caricato diverso da quello precedente allora la lista di aree dovrà essere
             # cancellata e aggiornata con le aree presenti nel nuovo file caricato.
@@ -146,6 +154,7 @@ def read_imported_geojson(uploaded_file):
                     })
                 # Calcola i bounds e aggiorna il session state
                 st.session_state.bounds = calculate_bounds(st.session_state.drawings)
+                
     except json.JSONDecodeError:
         st.error("Errore nella lettura del file GeoJSON. Assicurati che il file sia in un formato valido.")
         st.session_state.drawings = []
@@ -324,13 +333,15 @@ with st.container(border=True):
             feature_clicked = find_feature(last_object_clicked_coordinates, st.session_state.drawings)
             if feature_clicked not in st.session_state.feature_clicked_list:
                 st.session_state.feature_clicked_list.append(feature_clicked)
-                st.rerun()
             else:
                 st.session_state.feature_clicked_list.remove(feature_clicked)
-                st.rerun()
+            st.session_state.lat = st_component['center']['lat']
+            st.session_state.lon = st_component['center']['lng']
+            st.session_state.zoom = st_component['zoom']
+            st.rerun()
 
         # st.json(st.session_state.last_uploaded_file)
-        st.write(st.session_state.drawings)
+        # st.write(st.session_state.drawings)
 
     # Nella colonna col2 è presente la sezione riguardante le opzioni e l'export della mappa     
     with col2:
@@ -356,7 +367,6 @@ with st.container(border=True):
                 if remove_single_area_button:
                     drawings = remove_areas(st.session_state.drawings)
                     st.session_state.drawings = drawings
-                    # st.session_state.bounds = calculate_bounds(st.session_state.drawings)
                     st.session_state.feature_clicked_list = []
                     st.rerun() 
 
@@ -371,6 +381,12 @@ with st.container(border=True):
                 if remove_area_by_name_button:
                     drawings = remove_areas_by_name(st.session_state.drawings, name_area_correct)
                     st.session_state.drawings = drawings
+                    # Questo controllo fa sì che la mappa non si sposti dopo la cancellazione delle aree
+                    if 'bounds' in st.session_state:
+                        del st.session_state['bounds'] 
+                    st.session_state.lat = st_component['center']['lat']
+                    st.session_state.lon = st_component['center']['lng']
+                    st.session_state.zoom = st_component['zoom']
                     st.rerun()
 
             # Caso in cui si sceglie eliminazione totale di tutte le aree inserite
@@ -379,6 +395,7 @@ with st.container(border=True):
                 if remove_all_button:
                     st.session_state.drawings = []
                     st.session_state.feature_clicked_list = []
+                    # Questo controllo fa sì che la mappa non si sposti dopo la cancellazione delle aree
                     if 'bounds' in st.session_state:
                         del st.session_state['bounds']     
                     st.session_state.lat = st_component['center']['lat']

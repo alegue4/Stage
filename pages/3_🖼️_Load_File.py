@@ -2,7 +2,6 @@ import streamlit as st
 import json
 import requests
 import numpy as np
-import time
 from PIL import Image, ImageOps
 from io import BytesIO
 from streamlit_image_comparison import image_comparison
