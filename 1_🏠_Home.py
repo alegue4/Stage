@@ -3,6 +3,7 @@ import streamlit as st
 # ============ DEFINIZIONE SIDEBAR E STRUTTURA PAGINA ===============
 
 st.set_page_config(layout="wide")
+st.logo("img/streamlit_logo.png")
 st.sidebar.expander("Sidebar", expanded=True)
 
 st.sidebar.title("About")

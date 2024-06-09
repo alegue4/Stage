@@ -61,6 +61,39 @@ def create_map():
     draw.add_to(m)
     return m
 
+# Metodo che permette l'aggiunta dei geojson alla mappa in modo che questi siano
+# visibili e con annessi il tooltip relativo alle proprie informazioni. Serve inoltre
+# per cambiare il colore dell'area quando questa viene selezionata/deselezionata.
+# Per aggiungere i geojson alla mappa scorre la lista dei disegni inseriti ed estrae
+# le loro proprietà assegnando il colore se sono selezionate o meno.
+def add_geojson_to_map(drawings, m):
+    for drawing in drawings:
+        # Verifica se il disegno ha la proprietà 'properties'
+        if 'properties' in drawing:
+            properties = drawing['properties']
+            if properties:
+                popup_text = "<br>".join([f"{key}: {value}" for key, value in properties.items()])
+                # Se il disegno corrente è uguale alla feature cliccata, lo colora di rosso
+                if st.session_state.feature_clicked_list != [] and drawing in st.session_state.feature_clicked_list:
+                    folium.GeoJson(
+                        drawing,
+                        tooltip=popup_text,
+                        style_function=lambda x: {
+                            'fillColor': 'red',
+                            'color': 'red',
+                            'weight': 2
+                            }
+                    ).add_to(m)
+                else:
+                    folium.GeoJson(
+                        drawing,
+                        tooltip=popup_text
+                    ).add_to(m)
+            else:
+                folium.GeoJson(drawing).add_to(m)
+        else:
+            folium.GeoJson(drawing).add_to(m)
+
 # Funzione per calcolare i bounds di tutte le aree inserite.
 # Questa funziona viene chiamata ogni volta che viene aggiunta una nuova area alla
 # mappa o quando viene inserito un file tramite il pulsante di import. Questo perchè
@@ -206,9 +239,23 @@ def remove_areas_by_name(drawings, selected_names):
     filtered_drawings = [feature for feature in drawings if feature['properties']['name'] not in selected_names]
     return filtered_drawings
 
+# Funzione che serve per salvare lo stato attuale della mappa e fare un rerun per
+# aggiornare il contenuto. Questo metodo viene utilizzato quando vengono cancellate aree
+# dalla mappa e quindi bisogna fare un rerun per mostrare la mappa nuovamente senza 
+# le aree eliminate. Grazie a questo metodo serve per non spostare la mappa se si 
+# interagisce con essa.
+def save_map_state_and_rerun(st_component):
+    if 'bounds' in st.session_state:
+        del st.session_state['bounds']
+    st.session_state.lat = st_component['center']['lat']
+    st.session_state.lon = st_component['center']['lng']
+    st.session_state.zoom = st_component['zoom']
+    st.rerun()
+
 # ============ DEFINIZIONE SIDEBAR E STRUTTURA PAGINA ===============
 
 st.set_page_config(layout="wide")
+st.logo("img/streamlit_logo.png")
 
 st.sidebar.expander("Sidebar", expanded=True)
 
@@ -273,32 +320,7 @@ with st.container(border=True):
         # dalle properties di ciascuna e lo assegna alla relativa figura in modo tale
         # che sia visibile al momento dell'hover dell'area selezionata 
         if 'drawings' in st.session_state:
-            for drawing in st.session_state.drawings:
-                # Verifica se il disegno ha la proprietà 'properties'
-                if 'properties' in drawing:
-                    properties = drawing['properties']
-                    if properties:
-                        popup_text = "<br>".join([f"{key}: {value}" for key, value in properties.items()])
-                        # Se il disegno corrente è uguale alla feature cliccata, lo colora di rosso
-                        if st.session_state.feature_clicked_list != [] and drawing in st.session_state.feature_clicked_list:
-                            folium.GeoJson(
-                                drawing,
-                                tooltip=popup_text,
-                                style_function=lambda x: {
-                                    'fillColor': 'red',
-                                    'color': 'red',
-                                    'weight': 2
-                                    }
-                            ).add_to(m)
-                        else:
-                            folium.GeoJson(
-                                drawing,
-                                tooltip=popup_text
-                            ).add_to(m)
-                    else:
-                        folium.GeoJson(drawing).add_to(m)
-                else:
-                    folium.GeoJson(drawing).add_to(m)
+            add_geojson_to_map(st.session_state.drawings, m)
 
         # Centra la mappa ai limiti delle coordinate
         if 'bounds' in st.session_state:
@@ -328,6 +350,10 @@ with st.container(border=True):
             if last_drawing['geometry'] not in existing_drawings:
                 set_info_area(last_drawing, st_component)
 
+        # Questo if ottiene l'oggetto last_object_clicked contenente le coordinate
+        # di un punto cliccato dall'utente su un'area disegnata. Tramite queste coordinateà
+        # viene trovata la feature/area sulla mappa che le contiene e a seconda se è presente o meno
+        # nella lista delle feature selezionate allora verrà aggiunta/tolta (selezionata/deselezionata)
         if st_component.get('last_object_clicked') is not None:
             last_object_clicked_coordinates = st_component['last_object_clicked']
             feature_clicked = find_feature(last_object_clicked_coordinates, st.session_state.drawings)
@@ -335,10 +361,8 @@ with st.container(border=True):
                 st.session_state.feature_clicked_list.append(feature_clicked)
             else:
                 st.session_state.feature_clicked_list.remove(feature_clicked)
-            st.session_state.lat = st_component['center']['lat']
-            st.session_state.lon = st_component['center']['lng']
-            st.session_state.zoom = st_component['zoom']
-            st.rerun()
+            
+            save_map_state_and_rerun(st_component)
 
         # st.json(st.session_state.last_uploaded_file)
         # st.write(st.session_state.drawings)
@@ -368,7 +392,7 @@ with st.container(border=True):
                     drawings = remove_areas(st.session_state.drawings)
                     st.session_state.drawings = drawings
                     st.session_state.feature_clicked_list = []
-                    st.rerun() 
+                    save_map_state_and_rerun(st_component)
 
             # Caso in cui si sceglie eliminazione per tipologia (per properties: name)
             elif delete_select == "Cancella aree per tipologia":
@@ -381,13 +405,7 @@ with st.container(border=True):
                 if remove_area_by_name_button:
                     drawings = remove_areas_by_name(st.session_state.drawings, name_area_correct)
                     st.session_state.drawings = drawings
-                    # Questo controllo fa sì che la mappa non si sposti dopo la cancellazione delle aree
-                    if 'bounds' in st.session_state:
-                        del st.session_state['bounds'] 
-                    st.session_state.lat = st_component['center']['lat']
-                    st.session_state.lon = st_component['center']['lng']
-                    st.session_state.zoom = st_component['zoom']
-                    st.rerun()
+                    save_map_state_and_rerun(st_component)
 
             # Caso in cui si sceglie eliminazione totale di tutte le aree inserite
             else:
@@ -395,13 +413,7 @@ with st.container(border=True):
                 if remove_all_button:
                     st.session_state.drawings = []
                     st.session_state.feature_clicked_list = []
-                    # Questo controllo fa sì che la mappa non si sposti dopo la cancellazione delle aree
-                    if 'bounds' in st.session_state:
-                        del st.session_state['bounds']     
-                    st.session_state.lat = st_component['center']['lat']
-                    st.session_state.lon = st_component['center']['lng']
-                    st.session_state.zoom = st_component['zoom']
-                    st.rerun()
+                    save_map_state_and_rerun(st_component)
 
         with st.container(border=True):
             st.markdown("<h4 style='text-align: center; margin-top: -15px'>Export</h4>", unsafe_allow_html=True)

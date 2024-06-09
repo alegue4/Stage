@@ -96,6 +96,7 @@ def convert_to_thermal(image_bytes, first_color, second_color):
 
 # Set up Streamlit page
 st.set_page_config(layout="wide")
+st.logo("img/streamlit_logo.png")
 
 # Sidebar
 st.sidebar.title("About")
