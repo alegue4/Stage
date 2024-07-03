@@ -1,0 +1,2 @@
+Ticino_code/checkpoints/rgb_only_lc/checkpoints/last.ckpt filter=lfs diff=lfs merge=lfs -text
+Ticino_code/checkpoints/rgb_only_lc/events.out.tfevents.1683819409.claire.4131015.0 filter=lfs diff=lfs merge=lfs -text

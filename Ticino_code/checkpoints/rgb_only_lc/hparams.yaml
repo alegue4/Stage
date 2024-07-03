@@ -1,0 +1,31 @@
+params:
+  alpha: 1
+  batch_size: 5
+  encoder_name: resnet18
+  encoder_weights: None
+  experiment_name: KnownArchitectures_Resnet18
+  gradient_clipping: 0.5
+  input_channels: 3
+  input_size:
+  - 256
+  - 352
+  learning_rate: 0.0001
+  max_dict: /home/mbarbato/Desktop/Dataset/new_stat_pansh/max_dict.pkl
+  max_dict_01: /home/mbarbato/Desktop/Dataset/new_stat_pansh/max_dict_01.pkl
+  mean_dict_01: /home/mbarbato/Desktop/Dataset/new_stat_pansh/mean_dict_01.pkl
+  method: early_fusion
+  min_dict: /home/mbarbato/Desktop/Dataset/new_stat_pansh/min_dict.pkl
+  n_classes_agricolture: 20
+  n_classes_landuse: 8
+  n_epochs: 400
+  num_workers: 6
+  pca: true
+  root_dir: /home/mbarbato/Desktop/Dataset/Dataset
+  std_dict_01: /home/mbarbato/Desktop/Dataset/new_stat_pansh/std_dict_01.pkl
+  test_csv: /home/mbarbato/Desktop/Dataset/Dataset/List/test_set.txt
+  train_csv: /home/mbarbato/Desktop/Dataset/Dataset/List/train_set.txt
+  train_size:
+  - 256
+  - 256
+  val_csv: /home/mbarbato/Desktop/Dataset/Dataset/List/validation_set.txt
+  weight_decay: 0

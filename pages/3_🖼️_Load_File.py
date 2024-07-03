@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image, ImageOps
 from io import BytesIO
 from streamlit_image_comparison import image_comparison
+from Ticino_code import script_inference
 
 # ========================================================================
 # Definizione di Funzioni
@@ -91,6 +92,20 @@ def convert_to_thermal(image_bytes, first_color, second_color):
     img_thermal = ImageOps.colorize(img_gray, black=first_color, white=second_color, midpoint=128)
     return img_thermal
 
+# Funzione per convertire una immagine con l'algoritmo Ticino_code
+@st.cache_data()
+def convert_to_ticino(image_bytes, checkpoint):
+    # Apri l'immagine utilizzando PIL
+    img = Image.open(BytesIO(image_bytes))
+    # Converti l'immagine in scala di grigi
+    if checkpoint == "Checkpoint 1":
+        img_ticino = script_inference.load_and_execute(img, './Ticino_code/checkpoints/rgb_only_lc/checkpoints/last.ckpt')
+    else:
+        img_ticino = None
+    return img_ticino
+
+def rgb_to_hex(rgb):
+    return '#%02x%02x%02x' % tuple(rgb)
 # =============================================================================
 # Struttura della Web App
 
@@ -116,7 +131,6 @@ st.sidebar.info("""
     INFO 3
     """
 )
-
 
 # Dichiarazione delle variabili di stato per memorizzare le informazioni del file GeoJSON
 uploaded_geojson = None
@@ -151,7 +165,7 @@ with uploader_col:
 with select_col:
     # Selectbox per selezionare i diversi layer/algoritmi da applicare all'immagine
     selected_layer = st.selectbox("Seleziona layer da applicare all'immagine", 
-                                        options=["Black and White (BW)", "Pseudo Thermal (PT)"])
+                                        options=["Black and White (BW)", "Pseudo Thermal (PT)", "Ticino Code"])
     black_col, white_col = st.columns(2)
 
 
@@ -222,6 +236,24 @@ if data is not None:
                     with col1:
                         # Sezione per mostrare informazioni relative all'immagine ottenuta
                         st.subheader("Info Aggiuntive")
+                        c1 = st.container(border=True)
+                        with c1:
+                            left_col, right_col = st.columns(2)
+
+                            left_col.markdown("<p style='font-size: 25px; font-weight: 600;'>Coordinate dei Vertici</p>", unsafe_allow_html=True)
+                            left_col.write(f"Min Longitude: {min_lon}")
+                            left_col.write(f"Max Longitude: {max_lon}")
+                            left_col.write(f"Min Latitude: {min_lat}")
+                            left_col.write(f"Max Latitude: {max_lat}")
+
+                            left_col.markdown("<p style='font-size: 25px; font-weight: 600;'>Coordinate del Centro</p>", unsafe_allow_html=True)
+                            left_col.write(f"Latitudine: {center_lat}")
+                            left_col.write(f"Longitudine: {center_lon}")
+
+                            left_col.markdown("<p style='font-size: 25px; font-weight: 600;'>Risoluzione spaziale</p>", unsafe_allow_html=True)
+                            left_col.write(f"Risoluzione Lat (m/pixel): {rounded_res_lat}")
+                            left_col.write(f"Risoluzione Lon (m/pixel): {rounded_res_lon}")
+                            left_col.write(f"Area di un pixel (m²/pixel): {rounded_res_area}")
                         with st.expander("Apri per vedere le **istruzioni** per lo **Slider** di confronto delle immagini"):
                             st.write("""
                             Puoi utilizzare lo slider per il confronto delle due immagini nel seguente modo:
@@ -234,23 +266,6 @@ if data is not None:
                             In questo caso fare click sullo slider stesso (senza trascinarlo) per "rilasciarlo" e interrompere il movimento.
                                     
                             """)
-                        c1 = st.container(border=True)
-                        with c1:
-                            st.markdown("<p style='font-size: 25px; font-weight: 600;'>Coordinate dei Vertici</p>", unsafe_allow_html=True)
-                            min_col, max_col = st.columns(2)
-                            min_col.write(f"Min Longitude: {min_lon}")
-                            max_col.write(f"Max Longitude: {max_lon}")
-                            min_col.write(f"Min Latitude: {min_lat}")
-                            max_col.write(f"Max Latitude: {max_lat}")
-
-                            st.markdown("<p style='font-size: 25px; font-weight: 600;'>Coordinate del Centro</p>", unsafe_allow_html=True)
-                            st.write(f"Latitudine: {center_lat}")
-                            st.write(f"Longitudine: {center_lon}")
-
-                            st.markdown("<p style='font-size: 25px; font-weight: 600;'>Risoluzione spaziale</p>", unsafe_allow_html=True)
-                            st.write(f"Risoluzione in Latitudine (m/pixel): {rounded_res_lat}")
-                            st.write(f"Risoluzione in Longitudine (m/pixel): {rounded_res_lon}")
-                            st.write(f"Area di un pixel (m²/pixel): {rounded_res_area}")
                             
 
                     with col2:
@@ -264,7 +279,7 @@ if data is not None:
                                 img2= img_bw,
                                 label1="Mappa",
                                 label2="BW",
-                                width=600,
+                                width=580,
                                 starting_position=80,
                                 show_labels=True,
                                 make_responsive=True,
@@ -282,12 +297,57 @@ if data is not None:
                                 img2= img_pt,
                                 label1="Mappa",
                                 label2="PT",
-                                width=600,
+                                width=580,
                                 starting_position=80,
                                 show_labels=True,
                                 make_responsive=True,
                                 in_memory=True,
                             )
+                        elif selected_layer == "Ticino Code":
+                            selected_checkpoint = select_col.selectbox("Seleziona il checkpoint da applicare", 
+                                        options=["Checkpoint 1", "Checkpoint 2", "Checkpoint 3"])
+                            img_ticino = convert_to_ticino(static_map_bytes, selected_checkpoint)
+                            if img_ticino is not None:
+                                img_ticino = img_ticino.convert('RGB')  # Assicurati che l'immagine sia in formato RGB
+
+                                # Converti l'immagine in un array numpy
+                                image_array = np.array(img_ticino)
+
+                                # Trova i colori unici nell'immagine
+                                unique_colors = np.unique(image_array.reshape(-1, image_array.shape[2]), axis=0)
+
+                                # Converti i colori in codici esadecimali
+                                hex_colors = [rgb_to_hex(color) for color in unique_colors]
+                                
+                                image_comparison(
+                                    img1=static_map_image,
+                                    img2= img_ticino,
+                                    label1="Mappa",
+                                    label2="Ticino",
+                                    width=580,
+                                    starting_position=80,
+                                    show_labels=True,
+                                    make_responsive=True,
+                                    in_memory=True,
+                                )
+
+                                class_names = [f"Classe {i + 1}" for i in range(len(hex_colors))]
+                                # Verifica che le liste abbiano la stessa lunghezza
+                                if len(hex_colors) != len(class_names):
+                                    st.error("Le liste dei colori e dei nomi delle classi devono avere la stessa lunghezza.")
+                                else:
+                                    with right_col:
+                                        with st.container(border=True):
+                                            st.markdown("<p style='font-size: 25px; text-align: center;font-weight: 600; margin-top: -10px'>Legenda</p>", unsafe_allow_html=True)
+                                            for color, name in zip(hex_colors, class_names):
+                                                st.markdown(f"""
+                                                    <div style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 10px;">
+                                                        <div style="background-color: {color}; border: 1px solid black; width: 30px; height: 20px; margin-right: 10px;"></div>
+                                                        <span style="font-weight: 600;">{name}</span>
+                                                    </div>
+                                                """, unsafe_allow_html=True)
+                            else:
+                                st.warning("TODO: Da aggiungere gli altri checkpoint da applicare")
             else:
                 st.error("Il file GeoJSON deve contenere solo geometrie di tipo Polygon.")
 
