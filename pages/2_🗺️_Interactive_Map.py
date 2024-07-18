@@ -25,6 +25,10 @@ def initialize_session_state():
         st.session_state.bounds_toggle = False
     if 'feature_clicked_list' not in st.session_state:
         st.session_state.feature_clicked_list = []
+    if 'options' not in st.session_state:
+        st.session_state.options = ["Acqua", "Campo Agricolo", "Edificio", "Strada", "Vegetazione"]
+    if 'last_name_selected' not in st.session_state:
+        st.session_state.last_name_selected = "Acqua"
 
 # Funzione per creare mappa con il modulo foliumap di leafmap sulla quale
 # viene applicato il basemap satellite e l'interfaccia di disegno per 
@@ -42,6 +46,7 @@ def create_map():
         draw_control=False,  # Disattiviamo il draw_control
     )
     m.add_basemap("SATELLITE")
+    m.add_layer_control()
 
     # Creazione di un Draw plugin personalizzato
     draw = Draw(
@@ -120,13 +125,26 @@ def calculate_bounds(drawings):
 # rimanga ferma nell'ultima posizione in cui l'utente si è spostato sulla mappa.
 @st.experimental_dialog("Inserisci le informazioni per l'area selezionata")
 def set_info_area(last_drawing, st_component):
+    last_name_selected = st.session_state.last_name_selected
+    for index, option in enumerate(st.session_state.options):
+        if option== last_name_selected:
+            index_selected = index
+            break
     name = st.selectbox("Seleziona nome area selezionata", 
-                        options=["Edificio", "Campo Agricolo", "Vegetazione", "Acqua", "Strada"], 
-                        index=None,
-                        placeholder="Scegli un'opzione")
+                        options=st.session_state.options, 
+                        index=index_selected,
+                        placeholder="Seleziona un'opzione")
+    name_selected = st.text_input("Text input per nome area", label_visibility='collapsed', 
+                                  placeholder="Inserisci manualmente il nome dell'area selezionata").strip()
     if st.button("Salva Informazioni"):
-        if not name: 
-            name = "Area Sconosciuta"  # Nome di default
+        if name_selected:
+            st.session_state.last_name_selected = name_selected
+            name = name_selected
+            if name_selected not in st.session_state.options:
+                st.session_state.options.append(name_selected)
+                st.session_state.options = sorted([opt.strip() for opt in st.session_state.options])
+        else:
+            st.session_state.last_name_selected = name
         last_drawing['properties']['name'] = name.lower()
         update_session_state(last_drawing, st_component)
         st.rerun()
@@ -379,12 +397,11 @@ with st.container(border=True):
                 st.session_state.bounds_toggle = new_toggle_value
                 st.rerun()
 
-            delete_select = st.selectbox("Seleziona opzione di cancellazione", 
-                                         options=["Cancella aree tramite selezione", "Cancella aree per tipologia", "Cancella tutte le aree"],
-                                         placeholder="Scegli un'opzione")
-            
+            st.markdown("<p style='margin-bottom: -20px'>Seleziona il tipo di cancellazione</p>", unsafe_allow_html=True)
+            tab1, tab2, tab3 = st.tabs(["Canc. per selezione", "Canc. per tipologia", "Tutte le aree"])
+
             # Caso in cui si sceglie l'eliminazione di aree per selezione (click sull'area)
-            if delete_select == "Cancella aree tramite selezione":
+            with tab1:
                 st.info("Clicca su un'area per selezionarla/deselezionarla")
                 remove_single_area_button = st.button("Cancella una o più aree", disabled=not bool(st.session_state.get('feature_clicked_list')), use_container_width=True)
                 # st.write(st.session_state.drawings)
@@ -395,9 +412,9 @@ with st.container(border=True):
                     save_map_state_and_rerun(st_component)
 
             # Caso in cui si sceglie eliminazione per tipologia (per properties: name)
-            elif delete_select == "Cancella aree per tipologia":
+            with tab2:
                 name_area = st.multiselect("Seleziona una o più tipologia di aree da cancellare", 
-                                           options=["Edificio", "Campo Agricolo", "Vegetazione", "Acqua", "Strada"],
+                                           options=st.session_state.options,
                                            placeholder="Scegli un'opzione")
                 name_area_correct = [name.lower() for name in name_area]
                 # st.write(name_area_correct)
@@ -408,7 +425,7 @@ with st.container(border=True):
                     save_map_state_and_rerun(st_component)
 
             # Caso in cui si sceglie eliminazione totale di tutte le aree inserite
-            else:
+            with tab3:
                 remove_all_button = st.button("Cancella tutte le aree inserite", disabled=not bool(st.session_state.get('drawings')), use_container_width=True)
                 if remove_all_button:
                     st.session_state.drawings = []
