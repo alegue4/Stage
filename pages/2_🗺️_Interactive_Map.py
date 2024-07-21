@@ -40,13 +40,30 @@ def create_map():
     m = leafmap.Map(
         locate_control=True, 
         scale_control=True,
+        # fullscreen_control=False,
+        # minimap_control = True,
+        # google_map = "SATELLITE",
+        layers_control = True,
         plugin_LatLngPopup=False,
         center=(st.session_state.lat, st.session_state.lon), 
         zoom=st.session_state.zoom,
         draw_control=False,  # Disattiviamo il draw_control
     )
-    m.add_basemap("SATELLITE")
-    m.add_layer_control()
+
+    # L'aggiunta del layer_control non fa visualizzare correttamente la mappa
+    # m.add_layer_control()
+
+    wms_url = "https://wms.cartografia.agenziaentrate.gov.it/inspire/wms/ows01.php?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities"
+    layer_name = "Cartografia_Catastale"
+    m.add_wms_layer(
+        url=wms_url,
+        layers=layer_name,
+        name="Cartografia Catastale",
+        attribution="Agenzia delle Entrate"
+    )
+
+    # Aggiunta del LayerControl tramite folium
+    folium.LayerControl().add_to(m)
 
     # Creazione di un Draw plugin personalizzato
     draw = Draw(
@@ -64,6 +81,7 @@ def create_map():
     }
     )
     draw.add_to(m)
+
     return m
 
 # Metodo che permette l'aggiunta dei geojson alla mappa in modo che questi siano

@@ -1,9 +1,10 @@
 import streamlit as st
 import json
 import requests
+import geopandas as gpd
 import numpy as np
 from PIL import Image, ImageOps
-from io import BytesIO
+from io import BytesIO, StringIO
 from streamlit_image_comparison import image_comparison
 from Ticino_code import script_inference
 
@@ -175,7 +176,12 @@ if data is not None:
     if uploaded_geojson != data:
         # Se inserisco un nuovo file diverso da quello precedente allora lo salvo
         uploaded_geojson = data
-        geojson_data = json.load(uploaded_geojson)
+
+        file_contents = uploaded_geojson.read().decode('utf-8')
+        
+        geojson_data = json.load(StringIO(file_contents))
+        gdp_data = gpd.read_file(StringIO(file_contents))
+        crs_data = gdp_data.crs
 
         # Verifica se il file contiene almeno una feature, cioè un'area selezionata,
         # verificando se è presente l'attributo features oppure se la lunghezza
@@ -187,7 +193,7 @@ if data is not None:
             # Polygon, altrimenti non analizzare ulteriormente
             valid_geometry = True
             for feature in geojson_data['features']:
-                if feature['geometry']['type'] not in ['Polygon']:
+                if feature['geometry']['type'] not in ['Polygon', 'MultiPolygon']:
                     valid_geometry = False
                     break
             
@@ -239,7 +245,11 @@ if data is not None:
                         c1 = st.container(border=True)
                         with c1:
                             left_col, right_col = st.columns(2)
-
+                            
+                            left_col.markdown(f"<p style='font-size: 25px; font-weight: 600;'>CRS ({crs_data})</p>", unsafe_allow_html=True, help="""Coordinate
+                                              Reference System del file GeoJSON importato, generalmente EPSG:4326 (WGS 84).
+                                              """)
+        
                             left_col.markdown("<p style='font-size: 25px; font-weight: 600;'>Coordinate dei Vertici</p>", unsafe_allow_html=True)
                             left_col.write(f"Min Longitude: {min_lon}")
                             left_col.write(f"Max Longitude: {max_lon}")
