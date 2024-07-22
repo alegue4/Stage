@@ -31,7 +31,7 @@ st.header("Introduzione")
 
 st.write("""Questa Web App multipagina creata con [Streamlit](https://streamlit.io), mostra l'utilizzo di diverse librerie, 
         come [Leafmap](https://leafmap.org), [MapBox](https://www.mapbox.com/) e librerie di Python per l'analisi di dati JSON,
-        elaborazioni di immagini e molte altre per garantire il corretto funzionamento della Web App. Nella [GitHub repository](https://github.com/giswqs/streamlit-geospatial) 
+        elaborazioni di immagini e molte altre per garantire il corretto funzionamento della Web App. Nella [GitHub repository](https://github.com/alegue4/Stage) 
         è presente il codice relativo al progetto.
         """)
 st.write("""Sono presenti diverse sezioni per l'analisi e la visualizzazione di immagini satellitari con la possibilità

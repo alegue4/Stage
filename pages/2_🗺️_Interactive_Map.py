@@ -42,7 +42,7 @@ def create_map():
         scale_control=True,
         # fullscreen_control=False,
         # minimap_control = True,
-        # google_map = "SATELLITE",
+        google_map = "SATELLITE",
         layers_control = True,
         plugin_LatLngPopup=False,
         center=(st.session_state.lat, st.session_state.lon), 
@@ -50,11 +50,9 @@ def create_map():
         draw_control=False,  # Disattiviamo il draw_control
     )
 
-    # L'aggiunta del layer_control non fa visualizzare correttamente la mappa
-    # m.add_layer_control()
-
-    wms_url = "https://wms.cartografia.agenziaentrate.gov.it/inspire/wms/ows01.php?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities"
-    layer_name = "Cartografia_Catastale"
+    # L'aggiunta del wms layer per ora non funziona, non ho capito bene 
+    wms_url = "https://wms.cartografia.agenziaentrate.gov.it/inspire/wms/ows01.php?language=ita&"
+    layer_name = "fabbricati"
     m.add_wms_layer(
         url=wms_url,
         layers=layer_name,
@@ -63,7 +61,7 @@ def create_map():
     )
 
     # Aggiunta del LayerControl tramite folium
-    folium.LayerControl().add_to(m)
+    # folium.LayerControl().add_to(m)
 
     # Creazione di un Draw plugin personalizzato
     draw = Draw(
