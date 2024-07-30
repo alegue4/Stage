@@ -51,14 +51,19 @@ def create_map():
     )
 
     # L'aggiunta del wms layer per ora non funziona, non ho capito bene 
-    wms_url = "https://wms.cartografia.agenziaentrate.gov.it/inspire/wms/ows01.php?language=ita&"
-    layer_name = "fabbricati"
-    m.add_wms_layer(
-        url=wms_url,
-        layers=layer_name,
-        name="Cartografia Catastale",
-        attribution="Agenzia delle Entrate"
-    )
+    wms_url = 'https://wms.cartografia.agenziaentrate.gov.it/inspire/wms/ows01.php?language=ita'
+
+    # Aggiungi il layer WMS
+    #m.add_wms_layer(
+        #url=wms_url,
+        #layers='CP.CadastralZoning',
+        #name='Catasto',
+        #attribution='Cartografia dell\'Agenzia delle Entrate',
+        #format='image/png',
+        #transparent=True,
+        #opacity=1.0,
+        #shown=True
+    #)
 
     # Aggiunta del LayerControl tramite folium
     # folium.LayerControl().add_to(m)
