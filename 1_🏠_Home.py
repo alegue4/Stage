@@ -49,7 +49,7 @@ info_col.write("""Sulla destra è presente uno screenshot della sezione nel qual
                un pulsante di Export scaricare il file GeoJSON relativo oppure importare un file contente delle aree selezionate e salvate in precedenza.
                """)
 img_col.image("img/interactive_map_img.png", use_column_width=True, caption="Screenshot sezione Interactive Map")
-st.subheader("Load File")
+st.subheader("GeoJSON Analysis")
 info_col, img_col = st.columns([1, 3])
 info_col.write("""In questa sezione è possibile importare un file GeoJSON dal quale verranno estratte le coordinate di Bounding Box.
                Queste verranno usate per ottenere una immagine statica utilizzando l'API di Mapbox. Di questa immagine verranno visualizzate 
@@ -58,7 +58,7 @@ info_col.write("""In questa sezione è possibile importare un file GeoJSON dal q
                """)
 info_col.write("""Sulla destra è presente uno screenshot della sezione nel quale si può notare una immagine satellitare con le sue informazioni.
                """)
-img_col.image("img/load_file_img.png", use_column_width=True, caption="Screenshot sezione Load File")
+img_col.image("img/load_file_img.png", use_column_width=True, caption="Screenshot sezione GeoJSON Analysis")
 
 
         
