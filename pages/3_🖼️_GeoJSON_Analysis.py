@@ -6,7 +6,6 @@ import numpy as np
 from PIL import Image, ImageOps
 from io import BytesIO, StringIO
 from streamlit_image_comparison import image_comparison
-from Ticino_code import script_inference
 
 # ========================================================================
 # Definizione di Funzioni
@@ -93,18 +92,6 @@ def convert_to_thermal(image_bytes, first_color, second_color):
     img_thermal = ImageOps.colorize(img_gray, black=first_color, white=second_color, midpoint=128)
     return img_thermal
 
-# Funzione per convertire una immagine con l'algoritmo Ticino_code
-@st.cache_data()
-def convert_to_ticino(image_bytes, checkpoint):
-    # Apri l'immagine utilizzando PIL
-    img = Image.open(BytesIO(image_bytes))
-    # Converti l'immagine in scala di grigi
-    if checkpoint == "Checkpoint 1":
-        img_ticino = script_inference.load_and_execute(img, './Ticino_code/checkpoints/rgb_only_lc/checkpoints/last.ckpt')
-    else:
-        img_ticino = None
-    return img_ticino
-
 def rgb_to_hex(rgb):
     return '#%02x%02x%02x' % tuple(rgb)
 # =============================================================================
@@ -138,7 +125,7 @@ uploaded_geojson = None
 last_static_map_image = None
 
 # Title
-st.markdown("<h1 style='text-align: center; margin-top: -60px;'>Load File Page</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; margin-top: -60px;'>GeoJson Analysis</h1>", unsafe_allow_html=True)
 st.header("Introduzione")
 # Introduzione
 st.write("""In questa sezione della Web App è possibile caricare un file **GeoJSON** che 
@@ -166,7 +153,7 @@ with uploader_col:
 with select_col:
     # Selectbox per selezionare i diversi layer/algoritmi da applicare all'immagine
     selected_layer = st.selectbox("Seleziona layer da applicare all'immagine", 
-                                        options=["Black and White (BW)", "Pseudo Thermal (PT)", "Ticino Code"])
+                                        options=["Black and White (BW)", "Pseudo Thermal (PT)"])
     black_col, white_col = st.columns(2)
 
 
@@ -290,7 +277,7 @@ if data is not None:
                                 label1="Mappa",
                                 label2="BW",
                                 width=580,
-                                starting_position=80,
+                                starting_position=85,
                                 show_labels=True,
                                 make_responsive=True,
                                 in_memory=True,
@@ -308,56 +295,11 @@ if data is not None:
                                 label1="Mappa",
                                 label2="PT",
                                 width=580,
-                                starting_position=80,
+                                starting_position=85,
                                 show_labels=True,
                                 make_responsive=True,
                                 in_memory=True,
                             )
-                        elif selected_layer == "Ticino Code":
-                            selected_checkpoint = select_col.selectbox("Seleziona il checkpoint da applicare", 
-                                        options=["Checkpoint 1", "Checkpoint 2", "Checkpoint 3"])
-                            img_ticino = convert_to_ticino(static_map_bytes, selected_checkpoint)
-                            if img_ticino is not None:
-                                img_ticino = img_ticino.convert('RGB')  # Assicurati che l'immagine sia in formato RGB
-
-                                # Converti l'immagine in un array numpy
-                                image_array = np.array(img_ticino)
-
-                                # Trova i colori unici nell'immagine
-                                unique_colors = np.unique(image_array.reshape(-1, image_array.shape[2]), axis=0)
-
-                                # Converti i colori in codici esadecimali
-                                hex_colors = [rgb_to_hex(color) for color in unique_colors]
-                                
-                                image_comparison(
-                                    img1=static_map_image,
-                                    img2= img_ticino,
-                                    label1="Mappa",
-                                    label2="Ticino",
-                                    width=580,
-                                    starting_position=80,
-                                    show_labels=True,
-                                    make_responsive=True,
-                                    in_memory=True,
-                                )
-
-                                class_names = [f"Classe {i + 1}" for i in range(len(hex_colors))]
-                                # Verifica che le liste abbiano la stessa lunghezza
-                                if len(hex_colors) != len(class_names):
-                                    st.error("Le liste dei colori e dei nomi delle classi devono avere la stessa lunghezza.")
-                                else:
-                                    with right_col:
-                                        with st.container(border=True):
-                                            st.markdown("<p style='font-size: 25px; text-align: center;font-weight: 600; margin-top: -10px'>Legenda</p>", unsafe_allow_html=True)
-                                            for color, name in zip(hex_colors, class_names):
-                                                st.markdown(f"""
-                                                    <div style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 10px;">
-                                                        <div style="background-color: {color}; border: 1px solid black; width: 30px; height: 20px; margin-right: 10px;"></div>
-                                                        <span style="font-weight: 600;">{name}</span>
-                                                    </div>
-                                                """, unsafe_allow_html=True)
-                            else:
-                                st.warning("TODO: Da aggiungere gli altri checkpoint da applicare")
             else:
                 st.error("Il file GeoJSON deve contenere solo geometrie di tipo Polygon.")
 
