@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image, ImageOps
 from io import BytesIO, StringIO
 from streamlit_image_comparison import image_comparison
+from utils import setup_sidebar
 
 # ========================================================================
 # Definizione di Funzioni
@@ -99,26 +100,7 @@ def rgb_to_hex(rgb):
 
 # Set up Streamlit page
 st.set_page_config(layout="wide")
-st.logo("img/streamlit_logo.png")
-
-# Sidebar
-st.sidebar.title("About")
-st.sidebar.info("""
-    INFO 1
-    """
-)
-
-st.sidebar.title("Contact")
-st.sidebar.info("""
-    INFO 2
-    """
-)
-
-st.sidebar.title("Support")
-st.sidebar.info("""
-    INFO 3
-    """
-)
+setup_sidebar()
 
 # Dichiarazione delle variabili di stato per memorizzare le informazioni del file GeoJSON
 uploaded_geojson = None

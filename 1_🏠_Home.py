@@ -1,36 +1,16 @@
 import streamlit as st
+from utils import setup_sidebar
 
 # ============ DEFINIZIONE SIDEBAR E STRUTTURA PAGINA ===============
 
 st.set_page_config(layout="wide")
-st.logo("img/streamlit_logo.png")
-st.sidebar.expander("Sidebar", expanded=True)
+setup_sidebar()
 
-st.sidebar.title("About")
-st.sidebar.info(
-    """
-    INFO 1
-    """
-)
-st.sidebar.title("Contact")
-st.sidebar.info(
-    """
-    INFO 2
-    """
-)
-
-st.sidebar.title("Support")
-st.sidebar.info(
-    """
-    INFO 3
-    """
-)
-
-st.markdown("<h1 style='text-align: center; margin-top: -60px;'>Home Map</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; margin-top: -60px;'>Home Page</h1>", unsafe_allow_html=True)
 st.header("Introduzione")
 
-st.write("""Questa Web App multipagina creata con [Streamlit](https://streamlit.io), mostra l'utilizzo di diverse librerie, 
-        come [Leafmap](https://leafmap.org), [MapBox](https://www.mapbox.com/) e librerie di Python per l'analisi di dati JSON,
+st.write("""Questa Web App creata con [Streamlit](https://streamlit.io), mostra l'utilizzo di diverse librerie, 
+        come [Leafmap](https://leafmap.org), [MapBox](https://www.mapbox.com/) e librerie di Python per l'analisi di dati GeoJSON,
         elaborazioni di immagini e molte altre per garantire il corretto funzionamento della Web App. Nella [GitHub repository](https://github.com/alegue4/Stage) 
         è presente il codice relativo al progetto.
         """)

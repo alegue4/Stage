@@ -5,6 +5,7 @@ import folium
 from folium.plugins import Draw
 import json
 from geojson import Feature, FeatureCollection
+from utils import setup_sidebar
 
 # ============ DICHIARAZIONE E DEFINIZIONE DI FUNZIONI ===============
 
@@ -294,29 +295,7 @@ def save_map_state_and_rerun(st_component):
 # ============ DEFINIZIONE SIDEBAR E STRUTTURA PAGINA ===============
 
 st.set_page_config(layout="wide")
-st.logo("img/streamlit_logo.png")
-
-st.sidebar.expander("Sidebar", expanded=True)
-
-st.sidebar.title("About")
-st.sidebar.info(
-    """
-    INFO 1
-    """
-)
-st.sidebar.title("Contact")
-st.sidebar.info(
-    """
-    INFO 2
-    """
-)
-
-st.sidebar.title("Support")
-st.sidebar.info(
-    """
-    INFO 3
-    """
-)
+setup_sidebar()
 
 st.markdown("<h1 style='text-align: center; margin-top: -60px;'>Interactive Map</h1>", unsafe_allow_html=True)
 
