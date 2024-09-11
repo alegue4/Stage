@@ -111,19 +111,30 @@ st.markdown("<h1 style='text-align: center; margin-top: -60px;'>GeoJson Analysis
 st.header("Introduzione")
 # Introduzione
 st.write("""In questa sezione della Web App è possibile caricare un file **GeoJSON** che 
-         rappresenta un'area geografica delimitata da un poligono. I file
-         GeoJSON validi sono solo quelli con *Geometry* uguale a "**Polygon**".
-         E' possibile ottenere il file GeoJSON seguendo le istruzioni nella pagina Home 
-         della Web app. 
+         rappresenta l'area geografica contente le features presenti all'interno del file. 
+         I file GeoJSON validi sono solo quelli con features aventi *Geometry* uguale a "**Polygon**".
+         E' possibile ottenere un file GeoJSON corretto seguendo le istruzioni nella pagina Home 
+         della Web App e attraverso la pagina **Interactive Map**. 
          """)
-st.write("""Dopo aver caricato un file adeguato verrà visualizzata l'immagine satellitare 
-         ottenuta grazie a [Static Images API](https://docs.mapbox.com/api/maps/static-images/) 
-         fornita da **MapBox**. Con l'aiuto di uno *Slider* sarà possibile confrontare l'immagine satellitare
-         originale con il relativo layer applicato sopra di essa. 
-         Saranno inoltre mostrate le coordinate dell'area selezionata relative ai vertici e al centro dell'immagine. 
-         
+st.write("""Dopo aver caricato un file adeguato verrà visualizzata l'immagine satellitare,
+         ottenuta grazie alla API chiamata Static Images API fornita da **MapBox** ([documentazione qui](https://docs.mapbox.com/api/maps/static-images/)) e
+         i dati geospaziali come coordinate, risoluzione spaziale e CRS (Coordinate Reference System). 
+         E' possibile inoltre selezionare un layer da applicare al di sopra della immagine ottenuta. Grazie all'utilizzo di uno *Slider* si potrà
+         fare il confronto tra l'immagine originale e quella con il layer applicato.
          """)
 
+with st.expander("Apri per vedere le **istruzioni** per lo **Slider** di confronto delle immagini"):
+                            st.write("""
+                            Puoi utilizzare lo slider per il confronto delle due immagini nel seguente modo:
+
+                            1. **Click sull'immagine:** Facendo click direttamente sull'immagine si può spostare lo slider nella posizione desiderata.
+
+                            2. **Trascina lo slider:** Tieni premuto lo slider e trascina verso destra e sinistra per regolarlo.
+
+                            3. **Controllo dello slider:** Una volta interagito con lo slider potrebbe continuare a muoversi nonostante si sia rilasciato il mouse. 
+                            In questo caso fare click sullo slider stesso (senza trascinarlo) per "rilasciarlo" e interrompere il movimento.
+                                    
+                            """)
 uploader_col, select_col = st.columns(2)
 with uploader_col:
     # File uploader per caricare il file GeoJSON contenente le diverse informazioni
@@ -212,41 +223,38 @@ if data is not None:
                         # Sezione per mostrare informazioni relative all'immagine ottenuta
                         st.subheader("Info Aggiuntive")
                         c1 = st.container(border=True)
-                        with c1:
-                            left_col, right_col = st.columns(2)
+                        with c1:        
+                            st.markdown(f"""
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div style="padding: 15px 15px 0 15px; border: 2px solid #cccccc; border-radius: 8px; background-color: #f0f2f6;">
+                                        <p style='font-size: 25px; font-weight: 600;'>CRS ({crs_data})</p>
+                                    </div>
+                                    <div style="padding: 15px; border: 2px solid #cccccc; border-radius: 8px; background-color: #f0f2f6; display: flex; justify-content: space-between; align-items: stretch;">
+                                        <div style="flex: 1; padding-right: 15px; border-right: 2px solid grey;">
+                                            <p style='font-size: 25px; font-weight: 600;'>Coordinate dei Vertici</p>
+                                            <p>Min Latitude: {min_lat}</p>
+                                            <p>Max Latitude: {max_lat}</p>
+                                            <p>Min Longitude: {min_lon}</p>
+                                            <p>Max Longitude: {max_lon}</p>
+                                        </div>
+                                        <div style="flex: 1; padding-left: 15px;">
+                                            <p style='font-size: 25px; font-weight: 600;'>Coordinate del Centro</p>
+                                            <p>Latitude: {center_lat}</p>
+                                            <p>Longitude: {center_lon}</p>
+                                        </div>
+                                    </div>
+                                    <div style="padding: 15px 15px 0 15px; border: 2px solid #cccccc; margin-bottom: 20px; border-radius: 8px; background-color: #f0f2f6;">
+                                        <p style='font-size: 25px; font-weight: 600;'>Risoluzione Spaziale</p>
+                                        <p>Lat Resolution: {round(resolution_lat, 6)} m/pixel</p>
+                                        <p>Lon Resolution: {round(resolution_lon, 6)} m/pixel</p>
+                                        <p>Area del pixel: {round(resolution_area, 6)} m²/pixel</p>
+                                    </div>
+                                </div>
+                            """, unsafe_allow_html=True)
+
+
+
                             
-                            left_col.markdown(f"<p style='font-size: 25px; font-weight: 600;'>CRS ({crs_data})</p>", unsafe_allow_html=True, help="""Coordinate
-                                              Reference System del file GeoJSON importato, generalmente EPSG:4326 (WGS 84).
-                                              """)
-        
-                            left_col.markdown("<p style='font-size: 25px; font-weight: 600;'>Coordinate dei Vertici</p>", unsafe_allow_html=True)
-                            left_col.write(f"Min Longitude: {min_lon}")
-                            left_col.write(f"Max Longitude: {max_lon}")
-                            left_col.write(f"Min Latitude: {min_lat}")
-                            left_col.write(f"Max Latitude: {max_lat}")
-
-                            left_col.markdown("<p style='font-size: 25px; font-weight: 600;'>Coordinate del Centro</p>", unsafe_allow_html=True)
-                            left_col.write(f"Latitudine: {center_lat}")
-                            left_col.write(f"Longitudine: {center_lon}")
-
-                            left_col.markdown("<p style='font-size: 25px; font-weight: 600;'>Risoluzione spaziale</p>", unsafe_allow_html=True)
-                            left_col.write(f"Risoluzione Lat (m/pixel): {rounded_res_lat}")
-                            left_col.write(f"Risoluzione Lon (m/pixel): {rounded_res_lon}")
-                            left_col.write(f"Area di un pixel (m²/pixel): {rounded_res_area}")
-                        with st.expander("Apri per vedere le **istruzioni** per lo **Slider** di confronto delle immagini"):
-                            st.write("""
-                            Puoi utilizzare lo slider per il confronto delle due immagini nel seguente modo:
-
-                            1. **Click sull'immagine:** Facendo click direttamente sull'immagine si può spostare lo slider nella posizione desiderata.
-
-                            2. **Trascina lo slider:** Tieni premuto lo slider e trascina verso destra e sinistra per regolarlo.
-
-                            3. **Controllo dello slider:** Una volta interagito con lo slider potrebbe continuare a muoversi nonostante si sia rilasciato il mouse. 
-                            In questo caso fare click sullo slider stesso (senza trascinarlo) per "rilasciarlo" e interrompere il movimento.
-                                    
-                            """)
-                            
-
                     with col2:
                         # Sezione per mostrare immagine con il layer applicato e con lo slider di confronto
                         st.subheader("Immagine Satellitare")

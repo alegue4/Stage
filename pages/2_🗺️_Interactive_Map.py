@@ -5,7 +5,7 @@ import folium
 from folium.plugins import Draw
 import json
 from geojson import Feature, FeatureCollection
-from utils import setup_sidebar
+from utils import *
 
 # ============ DICHIARAZIONE E DEFINIZIONE DI FUNZIONI ===============
 
@@ -145,7 +145,7 @@ def calculate_bounds(drawings):
 # Estrae la latitudine e la longitudine del centro attuale e lo zoom della mappa 
 # e li salva nel session state in modo tale che alla chiusura del dialog la mappa 
 # rimanga ferma nell'ultima posizione in cui l'utente si è spostato sulla mappa.
-@st.experimental_dialog("Inserisci le informazioni per l'area selezionata")
+@st.dialog("Inserisci le informazioni per l'area selezionata")
 def set_info_area(last_drawing, st_component):
     last_name_selected = st.session_state.last_name_selected
     for index, option in enumerate(st.session_state.options):
@@ -470,30 +470,4 @@ with st.container(border=True):
                 st.json(geojson_str, expanded=False)
 
 
-# --------- PARTE DESCRITTIVA --------------
-st.header("Introduzione")
-
-st.write("""Questa pagina della Web App permette la visualizzazione di una mappa interattiva grazie alla libreria
-         di **Leafmap** con la possibilità di modificare, disegnare aree e salvare relative informazioni. Le 2 principali funzioni
-         di questa sezione sono:
-        """)
-st.write("""
-- **Esportazione** di un file in formato GeoJSON rappresentante le aree disegnate sulla mappa interattiva.
-- **Importazione** di un file GeoJSON salvato in precedenza per visualizzare a schermo le aree e le relative informazioni.
-""")
-
-st.subheader("Mappa")
-st.write("""Sulla mappa interattiva è possibile utilizzare i diversi elementi di disegno e di ricerca forniti dall'interfaccia 
-grafica di **Leafmap**. Gli elementi principali sono:
-""")
-st.write(""" 
-- Pulsanti di ***Zoom in*** e ***Zoom out*** per fare zoom sulla mappa.
-        
-- Pulsante ***Full Screen*** per visualizzare la mappa a schermo intero.
-- Elemento ***Show where I am*** per attivare la geolocalizzazione e ottenere 
-l'area approssimativa.
-- Pulsante di ***Ricerca*** per ottenere un luogo o una via precisa.
-- Elemento ***Draw a polygon*** per disegnare un poligoni con un numero di lati variabile.
-- Elemento ***Draw a rectangle*** per disegnare un rettangoli di dimensione variabile.
-""")
 
